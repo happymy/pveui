@@ -29,6 +29,7 @@ from django.views.static import serve
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/rbac/', include('apps.rbac.urls')),
+    path('api/curd/', include('apps.curdexample.urls')),
 ]
 
 # 仅当定义了 MEDIA_ROOT 时才添加媒体文件映射（避免导入期 AttributeError）

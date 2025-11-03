@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'apps.rbac.apps.RbacConfig',
+    'apps.curdexample.apps.CurdexampleConfig',
 ]
 
 MIDDLEWARE = [
