@@ -13,7 +13,12 @@ from .serializers import (
 
 
 class ExampleViewSet(AuditOwnerPopulateMixin, SoftDeleteMixin, ActionSerializerMixin, viewsets.ModelViewSet):
-    queryset = Example.objects.all().order_by('-id')
+    """示例 CRUD 视图集：支持按动作切换序列化器。"""
+    queryset = Example.objects.select_related(
+        'owner_organization',
+        'created_by',
+        'updated_by'
+    ).all().order_by('-id')
     permission_classes = [permissions.IsAuthenticated]
 
     # 兜底
