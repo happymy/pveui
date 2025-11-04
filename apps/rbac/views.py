@@ -131,6 +131,42 @@ class OrganizationViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'code']
     ordering_fields = ['order', 'id', 'name']
 
+    def list(self, request, *args, **kwargs):
+        """返回树形结构的组织列表（与菜单一致，不分页）。"""
+        queryset = self.filter_queryset(self.get_queryset())
+        orgs = list(queryset)
+
+        def to_node(o: Organization) -> Dict:
+            return {
+                "id": o.id,
+                "name": o.name,
+                "code": o.code,
+                "order": o.order,
+                "is_active": o.is_active,
+                "parent": o.parent_id,
+                "leader": o.leader_id if getattr(o, 'leader_id', None) else None,
+                "children": [],
+            }
+
+        node_map: Dict[int, Dict] = {o.id: to_node(o) for o in orgs}
+        roots: List[Dict] = []
+
+        for o in orgs:
+            node = node_map[o.id]
+            if o.parent_id and o.parent_id in node_map:
+                node_map[o.parent_id]["children"].append(node)
+            else:
+                roots.append(node)
+
+        def sort_tree(nodes: List[Dict]):
+            nodes.sort(key=lambda n: (n.get('order', 0), n.get('id', 0)))
+            for n in nodes:
+                sort_tree(n.get('children', []))
+
+        sort_tree(roots)
+
+        return Response(roots)
+
 
 class UserOrganizationViewSet(viewsets.ModelViewSet):
     """用户-组织绑定 CRUD 与列表检索。"""

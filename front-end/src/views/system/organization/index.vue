@@ -25,14 +25,12 @@
         </a-space>
       </div>
 
-      <!-- 表格 -->
+      <!-- 表格（树形） -->
       <a-table
         :columns="columns"
         :data="tableData"
         :loading="loading"
-        :pagination="pagination"
-        @page-change="handlePageChange"
-        @page-size-change="handlePageSizeChange"
+        :pagination="false"
         :bordered="false"
         :hoverable="true"
         style="margin-top: 16px"
@@ -134,7 +132,6 @@ const columns = [
   { title: 'ID', dataIndex: 'id', width: 80 },
   { title: '组织名称', dataIndex: 'name' },
   { title: '组织编码', dataIndex: 'code' },
-  { title: '上级组织', dataIndex: 'parent', slotName: 'parent' },
   { title: '负责人', dataIndex: 'leader', slotName: 'leader' },
   { title: '排序', dataIndex: 'order', width: 80 },
   { title: '状态', dataIndex: 'is_active', slotName: 'is_active', width: 100 },
@@ -144,13 +141,8 @@ const columns = [
 const searchText = ref('')
 const loading = ref(false)
 const tableData = ref([])
-const pagination = reactive({
-  current: 1,
-  pageSize: 20,
-  total: 0,
-  showTotal: true,
-  showPageSize: true
-})
+// 树形展示，关闭分页
+const pagination = reactive({ current: 1, pageSize: 20, total: 0 })
 
 const formVisible = ref(false)
 const formTitle = ref('新增组织')
@@ -177,16 +169,14 @@ const orgLoading = ref(false)
 const fetchData = async () => {
   loading.value = true
   try {
-    const params = {
-      page: pagination.current,
-      page_size: pagination.pageSize
-    }
+    const params = {}
     if (searchText.value) {
       params.search = searchText.value
     }
+    // 后端已返回树形结构
     const res = await getOrganizationList(params)
-    tableData.value = res.results || res.data || []
-    pagination.total = res.count || res.total || 0
+    const treeData = Array.isArray(res) ? res : (res.data || res.results || [])
+    tableData.value = treeData
   } catch (e) {
     Message.error('获取列表失败')
   } finally {
@@ -198,8 +188,10 @@ const fetchData = async () => {
 const loadOrgList = async () => {
   orgLoading.value = true
   try {
+    // 使用树形数据并扁平化用于父组织下拉
     const res = await getOrganizationList()
-    orgList.value = res.results || res.data || []
+    const treeData = Array.isArray(res) ? res : (res.results || res.data || [])
+    orgList.value = flattenOrgTree(treeData)
   } catch (e) {
     console.error('加载组织列表失败:', e)
   } finally {
@@ -215,14 +207,11 @@ const handleSearch = () => {
 
 // 分页
 const handlePageChange = (page) => {
-  pagination.current = page
-  fetchData()
+  // 树形展示无分页
 }
 
 const handlePageSizeChange = (pageSize) => {
-  pagination.pageSize = pageSize
-  pagination.current = 1
-  fetchData()
+  // 树形展示无分页
 }
 
 // 新增
@@ -318,6 +307,20 @@ onMounted(() => {
   fetchData()
   loadOrgList()
 })
+
+// 扁平化组织树用于下拉框
+function flattenOrgTree(nodes) {
+  const result = []
+  const walk = (arr) => {
+    if (!Array.isArray(arr)) return
+    for (const n of arr) {
+      result.push({ id: n.id, name: n.name })
+      if (n.children && n.children.length) walk(n.children)
+    }
+  }
+  walk(nodes)
+  return result
+}
 </script>
 
 <style scoped>
