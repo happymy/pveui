@@ -15,6 +15,11 @@ export const constantRoutes = [
     component: () => import('@/views/login'),
     hidden: true
   },
+  {
+    path: '/ceshi',
+    component: () => import('@/views/table'),
+    hidden: false
+  },
 
   // 根路径暂时重定向到 /system（路由加载后会覆盖）
   {
@@ -52,19 +57,19 @@ export function addDynamicRoutes(menuTree) {
       // 忽略，路由可能不存在
     }
   })
-  
+
   // 移除 catchAll 路由（如果存在）
   try {
     router.removeRoute(catchAllRouteName)
   } catch (e) {
     // 忽略，可能不存在
   }
-  
+
   // 生成新路由
   dynamicRoutes = menuTreeToRoutes(menuTree)
-  
+
   console.log('生成的动态路由:', dynamicRoutes)
-  
+
   // 添加新路由
   dynamicRoutes.forEach(route => {
     try {
@@ -73,21 +78,21 @@ export function addDynamicRoutes(menuTree) {
       console.error('添加路由失败:', route, e)
     }
   })
-  
+
   // 添加根路径重定向（如果存在第一个菜单）
   if (dynamicRoutes.length > 0) {
     const firstRoute = dynamicRoutes[0]
     // 如果第一个路由有 redirect，使用它的 redirect
     // 否则使用第一个路由的路径
     const rootRedirect = firstRoute.redirect || firstRoute.path
-    
+
     // 移除旧的根路径路由
     try {
       router.removeRoute('/')
     } catch (e) {
       // 忽略
     }
-    
+
     // 添加新的根路径重定向
     router.addRoute({
       path: '/',
@@ -95,7 +100,7 @@ export function addDynamicRoutes(menuTree) {
       hidden: true
     })
   }
-  
+
   // 添加 catchAll 路由（必须在最后）
   router.addRoute({
     name: catchAllRouteName,

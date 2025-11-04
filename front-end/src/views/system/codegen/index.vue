@@ -113,7 +113,7 @@
 
 <script setup>
 import { ref, reactive } from 'vue'
-import { Message } from '@arco-design/web-vue'
+import { Message, Modal } from '@arco-design/web-vue'
 import { submitCodegen } from '@/api/codegen'
 
 const form = reactive({ app_label: 'curdexample', model_name: 'Book', module_path: 'system/book', enhanced_data_scope: true })
@@ -251,7 +251,14 @@ const handleGenerate = async () => {
   try {
     const payload = buildPayload()
     await submitCodegen(payload)
-    Message.success('已提交生成任务（查看后端产物/.gen 文件）')
+    const modal = Modal.success({
+      title: '生成成功',
+      content: '前端、后端生成成功',
+      okText: '刷新页面',
+      onOk: () => { window.location.reload() },
+    })
+    // 1.2 秒后自动刷新当前页面
+    setTimeout(() => { try { modal.close() } catch(e) {} window.location.reload() }, 1200)
   } catch (e) {
     Message.error('生成失败')
   } finally {
