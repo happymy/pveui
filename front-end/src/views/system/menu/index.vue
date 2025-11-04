@@ -80,7 +80,19 @@
         </a-form-item>
 
         <a-form-item field="icon" label="图标">
-          <a-input v-model="formData.icon" placeholder="请输入图标名称，如：User" />
+          <a-select
+            v-model="formData.icon"
+            placeholder="请选择图标（Arco 内置）"
+            allow-search
+            allow-clear
+          >
+            <a-option v-for="opt in iconOptions" :key="opt.value" :value="opt.value">
+              <a-space>
+                <component :is="opt.value" />
+                <span>{{ opt.label }}</span>
+              </a-space>
+            </a-option>
+          </a-select>
         </a-form-item>
 
         <a-form-item field="parent" label="父菜单">
@@ -115,6 +127,7 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
+import * as ArcoIcons from '@arco-design/web-vue/es/icon'
 import { IconPlus } from '@arco-design/web-vue/es/icon'
 import {
   getMenuList,
@@ -165,6 +178,19 @@ const formRules = {
 
 const menuList = ref([])
 const menuLoading = ref(false)
+const iconOptions = ref([])
+
+// 规范化图标名到 kebab-case，并加前缀 'icon-'
+function normalizeIconName(name) {
+  if (!name) return ''
+  if (name.startsWith('icon-')) return name
+  // 将 PascalCase / camelCase 转为 kebab，如 UserSetting -> user-setting
+  const kebab = name
+    .replace(/([a-z])([A-Z])/g, '$1-$2')
+    .replace(/_/g, '-')
+    .toLowerCase()
+  return `icon-${kebab.replace(/^icon-/, '')}`
+}
 
 // 将树形数据扁平化（用于父菜单选择）
 const flattenMenuTree = (tree, result = []) => {
@@ -250,7 +276,7 @@ const handleEdit = async (record) => {
       title: res.title,
       path: res.path || '',
       component: res.component || '',
-      icon: res.icon || '',
+      icon: normalizeIconName(res.icon || ''),
       parent: res.parent || null,
       order: res.order || 0,
       is_hidden: res.is_hidden || false
@@ -326,6 +352,15 @@ const handleCancel = () => {
 onMounted(() => {
   fetchData()
   loadMenuList()
+  // 构建图标下拉：从 Arco 图标组件名中提取（IconUser -> icon-user）
+  const names = Object.keys(ArcoIcons)
+    .filter(n => /^Icon[A-Z]/.test(n))
+    .map(n => ({
+      label: n.replace(/^Icon/, ''),
+      value: 'icon-' + n.replace(/^Icon/, '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
+    }))
+    .sort((a,b) => a.label.localeCompare(b.label))
+  iconOptions.value = names
 })
 </script>
 
