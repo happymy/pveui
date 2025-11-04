@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'apps.codegen',
     'apps.rbac.apps.RbacConfig',
     'apps.curdexample.apps.CurdexampleConfig',
+
+    'apps.book'
 ]
 
 MIDDLEWARE = [

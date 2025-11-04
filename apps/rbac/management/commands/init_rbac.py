@@ -59,12 +59,12 @@ class Command(BaseCommand):
 
         # 2. 创建菜单
         self.stdout.write('创建菜单...')
-        menu_system = self._get_or_create_menu('系统管理', '/system', '', 'Setting', None, 1)
-        menu_user = self._get_or_create_menu('用户管理', '/system/user', 'system/user/index', 'User', menu_system, 1)
-        menu_role = self._get_or_create_menu('角色管理', '/system/role', 'system/role/index', 'Lock', menu_system, 2)
-        menu_menu = self._get_or_create_menu('菜单管理', '/system/menu', 'system/menu/index', 'Menu', menu_system, 3)
-        menu_permission = self._get_or_create_menu('权限管理', '/system/permission', 'system/permission/index', 'Key', menu_system, 4)
-        menu_org = self._get_or_create_menu('组织管理', '/system/organization', 'system/organization/index', 'Building', menu_system, 5)
+        menu_system = self._get_or_create_menu('系统管理', 'system', '', 'Setting', None, 1)
+        menu_user = self._get_or_create_menu('用户管理', 'user', 'system/user/index', 'User', menu_system, 1)
+        menu_role = self._get_or_create_menu('角色管理', 'role', 'system/role/index', 'Lock', menu_system, 2)
+        menu_menu = self._get_or_create_menu('菜单管理', 'menu', 'system/menu/index', 'Menu', menu_system, 3)
+        menu_permission = self._get_or_create_menu('权限管理', 'permission', 'system/permission/index', 'Key', menu_system, 4)
+        menu_org = self._get_or_create_menu('组织管理', 'organization', 'system/organization/index', 'Building', menu_system, 5)
         self.stdout.write(self.style.SUCCESS(f'  ✓ 创建菜单: {menu_system.title} 及其子菜单'))
 
         # 3. 创建权限

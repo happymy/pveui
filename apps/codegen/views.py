@@ -302,7 +302,8 @@ class GenerateFromSpecView(APIView):
 
             # 创建/同步菜单（顶级菜单），component 使用前端模块路径
             menu_title = model_name
-            menu_path = f"/{module_path}"
+            # 菜单路由路径统一为单词（不含斜杠），用模型名小写
+            menu_path = str(model_name).lower()
             menu_component = module_path if module_path.endswith('/index') else f"{module_path}/index"
             menu_defaults = {
                 "title": menu_title,
