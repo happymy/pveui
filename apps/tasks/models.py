@@ -1,45 +1,28 @@
 from django.db import models
-from django.utils import timezone
+from apps.common.models import BaseAuditModel
 
 
-class Job(models.Model):
-	TRIGGER_CHOICES = (
-		('cron', 'Cron'),
-		('interval', 'Interval'),
-		('date', 'Once'),
-	)
-
-	name = models.CharField(max_length=100, unique=True, verbose_name='任务名称')
-	description = models.CharField(max_length=255, blank=True, default='', verbose_name='描述')
-	func_path = models.CharField(max_length=255, verbose_name='函数路径')  # e.g. apps.tasks.examples:demo_task
-	trigger_type = models.CharField(max_length=20, choices=TRIGGER_CHOICES, default='cron', verbose_name='触发类型')
-
-	# cron fields
-	cron_second = models.CharField(max_length=64, blank=True, default='0')
-	cron_minute = models.CharField(max_length=64, blank=True, default='*')
-	cron_hour = models.CharField(max_length=64, blank=True, default='*')
-	cron_day = models.CharField(max_length=64, blank=True, default='*')
-	cron_month = models.CharField(max_length=64, blank=True, default='*')
-	cron_day_of_week = models.CharField(max_length=64, blank=True, default='*')
-
-	# interval
-	interval_seconds = models.PositiveIntegerField(default=60)
-
-	# date
-	once_run_at = models.DateTimeField(null=True, blank=True)
-
-	args = models.JSONField(default=list, blank=True)
-	kwargs = models.JSONField(default=dict, blank=True)
-	enabled = models.BooleanField(default=True)
-	job_id = models.CharField(max_length=128, blank=True, default='', editable=False)
-	last_run_at = models.DateTimeField(null=True, blank=True, editable=False)
-	updated_at = models.DateTimeField(auto_now=True)
-	created_at = models.DateTimeField(auto_now_add=True)
-
-	class Meta:
-		verbose_name = '定时任务'
-		verbose_name_plural = '定时任务'
-
-	def __str__(self):
-		return self.name
-
+class Job(BaseAuditModel):
+    """定时任务模型 - 简化版"""
+    
+    job_name = models.CharField(max_length=100, unique=True, verbose_name='任务名称')
+    invoke_target = models.CharField(max_length=255, verbose_name='调用目标')  # 如: NoParams, Params
+    job_params = models.JSONField(default=list, blank=True, verbose_name='参数')
+    cron_expression = models.CharField(max_length=100, default='* * * * *', verbose_name='Cron表达式')
+    next_valid_time = models.DateTimeField(null=True, blank=True, verbose_name='下次执行时间')
+    status = models.IntegerField(default=1, choices=[(0, '停用'), (1, '启用')], verbose_name='状态')
+    job_id = models.CharField(max_length=128, blank=True, default='', editable=False, verbose_name='调度器任务ID')
+    last_run_at = models.DateTimeField(null=True, blank=True, editable=False, verbose_name='最后执行时间')
+    
+    class Meta:
+        verbose_name = '定时任务'
+        verbose_name_plural = '定时任务'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.job_name
+    
+    @property
+    def enabled(self):
+        """兼容属性：status=1表示启用"""
+        return self.status == 1

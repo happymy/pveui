@@ -7,152 +7,175 @@
       <div class="toolbar" style="margin-bottom:12px;">
         <a-space>
           <a-button type="primary" @click="openEdit()">新增</a-button>
-          <a-input v-model="query.name" placeholder="按名称搜索" allow-clear style="width:200px" />
-          <a-select v-model="query.trigger_type" allow-clear placeholder="触发类型" style="width:140px">
-            <a-option value="cron">Cron</a-option>
-            <a-option value="interval">Interval</a-option>
-            <a-option value="date">Once</a-option>
-          </a-select>
+          <a-input v-model="query.job_name" placeholder="按名称搜索" allow-clear style="width:200px" />
           <a-button @click="fetchList">查询</a-button>
         </a-space>
       </div>
-      <a-table :data="list" :loading="loading" row-key="id">
-        <a-table-column title="名称" data-index="name" />
-        <a-table-column title="触发类型" data-index="trigger_type" />
-        <a-table-column title="函数" data-index="func_path" />
-        <a-table-column title="启用" :render="({record}) => record.enabled ? '是' : '否'" />
-        <a-table-column title="最近执行" data-index="last_run_at" />
-        <a-table-column title="操作" :width="220"
-                        :render="({record}) => renderActions(record)" />
+      <a-table :data="list" :loading="loading" row-key="jobId" :pagination="pagination" @page-change="handlePageChange" @page-size-change="handlePageSizeChange">
+        <template #columns>
+          <a-table-column title="任务名称" data-index="jobName" />
+          <a-table-column title="调用目标" data-index="invokeTarget" />
+          <a-table-column title="Cron表达式" data-index="cronExpression" />
+          <a-table-column title="下次执行" data-index="nextValidTime">
+            <template #cell="{ record }">
+              {{ formatDate(record.nextValidTime) }}
+            </template>
+          </a-table-column>
+          <a-table-column title="状态" data-index="status">
+            <template #cell="{ record }">
+              <a-tag :color="record.status === 1 ? 'green' : 'red'">
+                {{ record.status === 1 ? '启用' : '停用' }}
+              </a-tag>
+            </template>
+          </a-table-column>
+          <a-table-column title="操作" :width="220">
+            <template #cell="{ record }">
+              <a-space :size="8">
+                <a-button type="text" size="small" @click="openEdit(record)">编辑</a-button>
+                <a-button type="text" size="small" @click="handleRun(record)">执行一次</a-button>
+                <a-button type="text" size="small" status="danger" @click="handleDelete(record)">删除</a-button>
+              </a-space>
+            </template>
+          </a-table-column>
+        </template>
       </a-table>
     </a-card>
 
-    <a-modal v-model:visible="visible" :title="form.id ? '编辑任务' : '新增任务'" @ok="submit" :mask-closable="false">
+    <a-modal v-model:visible="visible" :title="form.jobId ? '编辑任务' : '新增任务'" @ok="submit" :mask-closable="false">
       <a-form :model="form" layout="vertical">
-        <a-form-item field="name" label="名称" required>
-          <a-input v-model="form.name" />
+        <a-form-item field="jobName" label="任务名称" required>
+          <a-input v-model="form.jobName" />
         </a-form-item>
-        <a-form-item field="func_path" label="函数路径" required>
-          <a-input v-model="form.func_path" placeholder="apps.tasks.examples:demo_task" />
+        <a-form-item field="invokeTarget" label="调用目标" required>
+          <a-input v-model="form.invokeTarget" placeholder="如: NoParams, Params" />
         </a-form-item>
-        <a-form-item field="trigger_type" label="触发类型" required>
-          <a-select v-model="form.trigger_type">
-            <a-option value="cron">Cron</a-option>
-            <a-option value="interval">Interval</a-option>
-            <a-option value="date">Once</a-option>
-          </a-select>
+        <a-form-item field="cronExpression" label="Cron表达式" required>
+          <a-input v-model="form.cronExpression" placeholder="* * * * * (分 时 日 月 周)" />
+          <template #extra>标准5位格式：分 时 日 月 周，或6位：秒 分 时 日 月 周</template>
         </a-form-item>
-        <template v-if="form.trigger_type==='cron'">
-          <a-form-item label="Cron 秒">
-            <a-input v-model="form.cron_second" />
-          </a-form-item>
-          <a-form-item label="Cron 分">
-            <a-input v-model="form.cron_minute" />
-          </a-form-item>
-          <a-form-item label="Cron 时">
-            <a-input v-model="form.cron_hour" />
-          </a-form-item>
-          <a-form-item label="Cron 日">
-            <a-input v-model="form.cron_day" />
-          </a-form-item>
-          <a-form-item label="Cron 月">
-            <a-input v-model="form.cron_month" />
-          </a-form-item>
-          <a-form-item label="Cron 周">
-            <a-input v-model="form.cron_day_of_week" />
-          </a-form-item>
-        </template>
-        <template v-else-if="form.trigger_type==='interval'">
-          <a-form-item label="间隔(秒)" required>
-            <a-input-number v-model="form.interval_seconds" :min="1" />
-          </a-form-item>
-        </template>
-        <template v-else>
-          <a-form-item label="一次性时间">
-            <a-date-picker v-model="form.once_run_at" show-time style="width:100%" />
-          </a-form-item>
-        </template>
-        <a-form-item label="Args(JSON 数组)">
-          <a-input v-model="argsStr" placeholder='如 ["a", 1]' />
+        <a-form-item field="jobParams" label="参数(JSON数组)">
+          <a-input v-model="paramsStr" placeholder='如 ["baize", "18"]' />
+          <template #extra>参数数组，将作为位置参数传递给任务函数</template>
         </a-form-item>
-        <a-form-item label="Kwargs(JSON 对象)">
-          <a-input v-model="kwargsStr" placeholder='如 {"key": "v"}' />
-        </a-form-item>
-        <a-form-item label="启用">
-          <a-switch v-model="form.enabled" />
-        </a-form-item>
-        <a-form-item label="描述">
-          <a-textarea v-model="form.description" />
+        <a-form-item field="status" label="状态">
+          <a-radio-group v-model="form.status">
+            <a-radio :value="1">启用</a-radio>
+            <a-radio :value="0">停用</a-radio>
+          </a-radio-group>
         </a-form-item>
       </a-form>
     </a-modal>
   </div>
-  
 </template>
 
 <script setup>
-import {ref, reactive, h} from 'vue'
+import {ref, reactive} from 'vue'
 import { Message, Modal } from '@arco-design/web-vue'
 import { listTasks, createTask, updateTask, deleteTask, runTaskNow } from '@/api/task'
 
 const loading = ref(false)
 const list = ref([])
 const visible = ref(false)
-const form = reactive({ enabled: true, trigger_type: 'cron' })
-const argsStr = ref('[]')
-const kwargsStr = ref('{}')
-const query = reactive({ name: '', trigger_type: undefined })
+const form = reactive({ jobId: undefined, jobName: '', invokeTarget: '', cronExpression: '* * * * *', jobParams: [], status: 1 })
+const paramsStr = ref('[]')
+const query = reactive({ job_name: '' })
+const pagination = reactive({ current: 1, pageSize: 10, total: 0, showTotal: true })
 
 function fetchList() {
   loading.value = true
-  listTasks(query).then(res => {
-    list.value = res?.results || res || []
+  const params = {
+    ...query,
+    page: pagination.current,
+    page_size: pagination.pageSize
+  }
+  listTasks(params).then(res => {
+    if (res.data && res.data.rows) {
+      list.value = res.data.rows
+      pagination.total = res.data.total || 0
+    } else if (res.results) {
+      list.value = res.results
+      pagination.total = res.count || 0
+    } else {
+      list.value = res || []
+    }
+  }).catch(err => {
+    console.error('获取任务列表失败:', err)
+    Message.error('获取任务列表失败')
   }).finally(() => loading.value = false)
 }
 
+function formatDate(dateStr) {
+  if (!dateStr) return '-'
+  try {
+    const date = new Date(dateStr)
+    return date.toLocaleString('zh-CN', { 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      second: '2-digit'
+    })
+  } catch {
+    return dateStr
+  }
+}
+
 function openEdit(record) {
-  Object.assign(form, { id: undefined, name: '', func_path: '', trigger_type: 'cron', cron_second: '0', cron_minute: '*', cron_hour: '*', cron_day: '*', cron_month: '*', cron_day_of_week: '*', interval_seconds: 60, once_run_at: undefined, enabled: true, description: '' })
-  argsStr.value = '[]'
-  kwargsStr.value = '{}'
+  Object.assign(form, { jobId: undefined, jobName: '', invokeTarget: '', cronExpression: '* * * * *', jobParams: [], status: 1 })
+  paramsStr.value = '[]'
   if (record) {
     Object.assign(form, record)
-    argsStr.value = JSON.stringify(record.args || [])
-    kwargsStr.value = JSON.stringify(record.kwargs || {})
+    paramsStr.value = JSON.stringify(record.jobParams || [])
   }
   visible.value = true
 }
 
 function submit() {
   try {
-    form.args = JSON.parse(argsStr.value || '[]')
-    form.kwargs = JSON.parse(kwargsStr.value || '{}')
+    form.jobParams = JSON.parse(paramsStr.value || '[]')
   } catch (e) {
-    Message.error('Args/Kwargs 需为合法 JSON')
+    Message.error('参数需为合法 JSON 数组')
     return
   }
-  const api = form.id ? updateTask.bind(null, form.id) : createTask
+  const api = form.jobId ? updateTask.bind(null, form.jobId) : createTask
   api(form).then(() => {
     Message.success('保存成功')
     visible.value = false
     fetchList()
+  }).catch(err => {
+    Message.error(err?.response?.data?.detail || '保存失败')
   })
 }
 
 function handleDelete(record) {
-  Modal.confirm({ title: '确认删除', content: `删除任务「${record.name}」?`, onOk: () => deleteTask(record.id).then(() => { Message.success('已删除'); fetchList() }) })
+  Modal.confirm({ 
+    title: '确认删除', 
+    content: `删除任务「${record.jobName}」?`, 
+    onOk: () => deleteTask(record.jobId).then(() => { 
+      Message.success('已删除')
+      fetchList() 
+    })
+  })
 }
 
 function handleRun(record) {
-  runTaskNow(record.id).then(() => Message.success('已触发执行'))
+  runTaskNow(record.jobId).then(() => Message.success('已触发执行')).catch(err => {
+    Message.error(err?.response?.data?.detail || '执行失败')
+  })
 }
 
-function renderActions(record) {
-  return [
-    h('a-button', { type: 'text', onClick: () => openEdit(record) }, { default: () => '编辑' }),
-    h('a-button', { type: 'text', onClick: () => handleRun(record) }, { default: () => '执行一次' }),
-    h('a-button', { type: 'text', status: 'danger', onClick: () => handleDelete(record) }, { default: () => '删除' })
-  ]
+function handlePageChange(page) {
+  pagination.current = page
+  fetchList()
 }
+
+function handlePageSizeChange(pageSize) {
+  pagination.pageSize = pageSize
+  pagination.current = 1
+  fetchList()
+}
+
 
 fetchList()
 </script>
@@ -160,5 +183,3 @@ fetchList()
 <style scoped>
 .task-page { padding: 12px; }
 </style>
-
-
