@@ -18,15 +18,15 @@ RUN apt-get update && apt-get install -y \
     mysql-client \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制 requirements 文件
-COPY requirements.txt /app/
+# 复制 requirements 文件（从 backend 目录）
+COPY backend/requirements.txt /app/
 
 # 安装 Python 依赖
 RUN pip install --upgrade pip && \
     pip install -r requirements.txt
 
-# 复制项目代码
-COPY . /app/
+# 复制项目代码（从 backend 目录）
+COPY backend/ /app/
 
 # 收集静态文件（如果需要）
 RUN python manage.py collectstatic --noinput || true
