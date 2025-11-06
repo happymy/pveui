@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'apps.tasks.apps.TasksConfig',
     'apps.rbac.apps.RbacConfig',
     'apps.curdexample.apps.CurdexampleConfig',
+    'apps.audit.apps.AuditConfig',
 ]
 
 MIDDLEWARE = [
@@ -55,6 +56,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'apps.audit.middleware.OperationLogMiddleware',  # 操作日志中间件
 ]
 
 ROOT_URLCONF = 'django_vue_adminx.urls'

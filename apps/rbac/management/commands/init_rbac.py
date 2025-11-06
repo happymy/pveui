@@ -67,6 +67,7 @@ class Command(BaseCommand):
         menu_org = self._get_or_create_menu('组织管理', 'organization', 'system/organization/index', 'icon-moon-fill', menu_system, 5)
         menu_monitor = self._get_or_create_menu('系统监控', 'monitor', 'system/monitor/index', 'icon-dashboard', menu_system, 6)
         menu_tasks = self._get_or_create_menu('任务管理', 'task', 'system/task/index', 'icon-schedule', menu_system, 7)
+        menu_operation_log = self._get_or_create_menu('操作日志', 'operation-log', 'system/operation-log/index', 'icon-file', menu_system, 9)
         menu_codegen = self._get_or_create_menu('代码生成器', 'codegen', 'system/codegen/index', 'icon-tiktok-color', menu_system, 0)
         menu_example = self._get_or_create_menu('示例管理', 'example', 'curdexample/index', 'icon-swap', menu_system, 8)
         self.stdout.write(self.style.SUCCESS(f'  ✓ 创建菜单: {menu_system.title} 及其子菜单'))
@@ -115,6 +116,9 @@ class Command(BaseCommand):
         perms.append(self._get_or_create_permission('任务更新', 'tasks:update', 'PUT', r'/api/tasks/tasks/\d+/', menu_tasks))
         perms.append(self._get_or_create_permission('任务删除', 'tasks:delete', 'DELETE', r'/api/tasks/tasks/\d+/', menu_tasks))
         perms.append(self._get_or_create_permission('任务立即执行', 'tasks:run_now', 'POST', r'/api/tasks/tasks/\d+/run_now/', menu_tasks))
+        # 操作日志权限
+        perms.append(self._get_or_create_permission('操作日志列表', 'operation_log:list', 'GET', '/api/audit/logs/', menu_operation_log))
+        perms.append(self._get_or_create_permission('操作日志查看', 'operation_log:view', 'GET', r'/api/audit/logs/\d+/', menu_operation_log))
         # 示例管理权限（curdexample）
         perms.append(self._get_or_create_permission('示例列表', 'example:list', 'GET', '/api/curd/example/', menu_example))
         perms.append(self._get_or_create_permission('示例创建', 'example:create', 'POST', '/api/curd/example/', menu_example))
@@ -127,7 +131,7 @@ class Command(BaseCommand):
         self.stdout.write('创建角色...')
         role_admin = self._get_or_create_role('超级管理员', 'ADMIN', '拥有所有权限', 'ALL')
         role_admin.permissions.set(perms)
-        role_admin.menus.set([menu_system, menu_user, menu_role, menu_menu, menu_permission, menu_org, menu_monitor, menu_tasks, menu_codegen, menu_example])
+        role_admin.menus.set([menu_system, menu_user, menu_role, menu_menu, menu_permission, menu_org, menu_monitor, menu_tasks, menu_operation_log, menu_codegen, menu_example])
         role_admin.custom_data_organizations.set([org_root, org_admin])
         
         role_user = self._get_or_create_role('普通用户', 'USER', '普通用户角色', 'SELF')
