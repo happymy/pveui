@@ -59,6 +59,7 @@ class Command(BaseCommand):
 
         # 2. 创建菜单
         self.stdout.write('创建菜单...')
+        menu_dashboard = self._get_or_create_menu('仪表盘', 'dashboard', 'dashboard/index', 'icon-dashboard', None, 0)
         menu_system = self._get_or_create_menu('系统管理', 'system', '', 'icon-to-top', None, 1)
         menu_user = self._get_or_create_menu('用户管理', 'user', 'system/user/index', 'icon-up-circle', menu_system, 1)
         menu_role = self._get_or_create_menu('角色管理', 'role', 'system/role/index', 'icon-pen-fill', menu_system, 2)
@@ -75,6 +76,9 @@ class Command(BaseCommand):
         # 3. 创建权限
         self.stdout.write('创建权限...')
         perms = []
+        
+        # 仪表盘权限
+        perms.append(self._get_or_create_permission('仪表盘查看', 'dashboard:view', 'GET', '/api/rbac/dashboard/', menu_dashboard))
         
         # 用户管理权限
         perms.append(self._get_or_create_permission('用户列表', 'user:list', 'GET', '/api/rbac/users/', menu_user))
@@ -131,7 +135,7 @@ class Command(BaseCommand):
         self.stdout.write('创建角色...')
         role_admin = self._get_or_create_role('超级管理员', 'ADMIN', '拥有所有权限', 'ALL')
         role_admin.permissions.set(perms)
-        role_admin.menus.set([menu_system, menu_user, menu_role, menu_menu, menu_permission, menu_org, menu_monitor, menu_tasks, menu_operation_log, menu_codegen, menu_example])
+        role_admin.menus.set([menu_dashboard, menu_system, menu_user, menu_role, menu_menu, menu_permission, menu_org, menu_monitor, menu_tasks, menu_operation_log, menu_codegen, menu_example])
         role_admin.custom_data_organizations.set([org_root, org_admin])
         
         role_user = self._get_or_create_role('普通用户', 'USER', '普通用户角色', 'SELF')

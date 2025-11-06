@@ -40,6 +40,7 @@ from .views import (
     OrganizationTreeView,
     MenuTreeView,
     SystemMetricsView,
+    DashboardView,
 )
 
 # 可根据需要将 basename 显式指定，当前使用默认模型名推导
@@ -57,6 +58,7 @@ urlpatterns = [
     path('organizations/tree/', OrganizationTreeView.as_view()),
     path('menu-tree/', MenuTreeView.as_view()),
     path('system/metrics/', SystemMetricsView.as_view()),
+    path('dashboard/', DashboardView.as_view()),
     path('auth/login/', LoginView.as_view()),
     path('auth/logout/', LogoutView.as_view()),
     path('auth/user-info/', UserInfoView.as_view()),

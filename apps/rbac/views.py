@@ -688,3 +688,125 @@ class SystemMetricsView(APIView):
             return Response(data)
         except Exception as e:
             return Response({"detail": f"metrics 采集失败: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class DashboardView(APIView):
+    """仪表盘数据：统计概览、最近操作、系统状态等。"""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):  # noqa: D401
+        """获取仪表盘数据。"""
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Count, Q
+        from apps.audit.models import OperationLog
+        from apps.tasks.models import Job
+        
+        # 1. 统计概览
+        stats = {
+            'users': User.objects.filter(is_active=True).count(),
+            'roles': Role.objects.count(),  # Role 模型没有 is_active 字段
+            'menus': Menu.objects.filter(is_hidden=False).count(),
+            'permissions': Permission.objects.filter(is_active=True).count(),
+            'organizations': Organization.objects.filter(is_active=True).count(),
+            'operation_logs': OperationLog.objects.count(),
+            'tasks': Job.objects.count(),
+            'active_tasks': Job.objects.filter(status=1).count(),
+        }
+
+        # 2. 最近操作日志（最近 10 条）
+        recent_logs = OperationLog.objects.select_related('user', 'content_type').order_by('-created_at')[:10]
+        recent_logs_data = []
+        for log in recent_logs:
+            recent_logs_data.append({
+                'id': log.id,
+                'username': log.username or log.user.username if log.user else '匿名',
+                'action_type': log.action_type,
+                'action_type_display': log.get_action_type_display(),
+                'request_path': log.request_path,
+                'request_method': log.request_method,
+                'status_code': log.status_code,
+                'created_at': log.created_at.isoformat() if log.created_at else None,
+            })
+
+        # 3. 操作类型统计（最近 7 天）
+        seven_days_ago = timezone.now() - timedelta(days=7)
+        action_stats = OperationLog.objects.filter(
+            created_at__gte=seven_days_ago
+        ).values('action_type').annotate(count=Count('id')).order_by('-count')
+        action_stats_data = {
+            item['action_type']: item['count'] for item in action_stats
+        }
+
+        # 4. 每日操作统计（最近 7 天，用于图表）
+        daily_stats = []
+        for i in range(6, -1, -1):  # 从 6 天前到今天
+            day_start = (timezone.now() - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end = day_start + timedelta(days=1)
+            count = OperationLog.objects.filter(
+                created_at__gte=day_start,
+                created_at__lt=day_end
+            ).count()
+            daily_stats.append({
+                'date': day_start.strftime('%Y-%m-%d'),
+                'count': count,
+            })
+
+        # 5. 最近登录用户（最近 7 天有操作的用户）
+        recent_users = User.objects.filter(
+            operation_logs__created_at__gte=seven_days_ago
+        ).distinct().annotate(
+            log_count=Count('operation_logs', filter=Q(operation_logs__created_at__gte=seven_days_ago))
+        ).order_by('-log_count')[:10]
+        recent_users_data = []
+        for user in recent_users:
+            recent_users_data.append({
+                'id': user.id,
+                'username': user.username,
+                'email': getattr(user, 'email', ''),
+                'log_count': user.log_count,
+            })
+
+        # 6. 系统状态（简化版，避免重复调用 SystemMetricsView）
+        system_status = {}
+        try:
+            if psutil:
+                cpu_percent = psutil.cpu_percent(interval=0.1)
+                mem = psutil.virtual_memory()
+                system_status = {
+                    'cpu_percent': round(cpu_percent, 1),
+                    'memory_percent': round(mem.percent, 1),
+                    'memory_used_gb': round(mem.used / (1024 ** 3), 2),
+                    'memory_total_gb': round(mem.total / (1024 ** 3), 2),
+                }
+        except Exception:
+            pass
+
+        # 7. 错误操作统计（状态码 >= 400）
+        error_count = OperationLog.objects.filter(
+            created_at__gte=seven_days_ago,
+            status_code__gte=400
+        ).count()
+
+        # 8. 最活跃的 API 路径（最近 7 天）
+        top_paths = OperationLog.objects.filter(
+            created_at__gte=seven_days_ago
+        ).values('request_path').annotate(count=Count('id')).order_by('-count')[:10]
+        top_paths_data = [
+            {'path': item['request_path'], 'count': item['count']}
+            for item in top_paths
+        ]
+
+        data = {
+            'stats': stats,
+            'recent_logs': recent_logs_data,
+            'action_stats': action_stats_data,
+            'daily_stats': daily_stats,
+            'recent_users': recent_users_data,
+            'system_status': system_status,
+            'error_count': error_count,
+            'top_paths': top_paths_data,
+        }
+
+        return Response(data)
