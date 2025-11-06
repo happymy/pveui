@@ -59,20 +59,30 @@ class Command(BaseCommand):
 
         # 2. 创建菜单
         self.stdout.write('创建菜单...')
+        # 顶级菜单
         menu_dashboard = self._get_or_create_menu('仪表盘', 'dashboard', 'dashboard/index', 'icon-dashboard', None, 0)
-        menu_system = self._get_or_create_menu('系统管理', 'system', '', 'icon-to-top', None, 1)
-        menu_user = self._get_or_create_menu('用户管理', 'user', 'system/user/index', 'icon-up-circle', menu_system, 1)
-        menu_role = self._get_or_create_menu('角色管理', 'role', 'system/role/index', 'icon-pen-fill', menu_system, 2)
-        menu_menu = self._get_or_create_menu('菜单管理', 'menu', 'system/menu/index', 'icon-notification-close', menu_system, 3)
-        menu_permission = self._get_or_create_menu('权限管理', 'permission', 'system/permission/index', 'icon-zoom-in', menu_system, 4)
-        menu_org = self._get_or_create_menu('组织管理', 'organization', 'system/organization/index', 'icon-moon-fill', menu_system, 5)
-        menu_monitor = self._get_or_create_menu('系统监控', 'monitor', 'system/monitor/index', 'icon-dashboard', menu_system, 6)
-        menu_tasks = self._get_or_create_menu('任务管理', 'task', 'system/task/index', 'icon-schedule', menu_system, 7)
-        menu_operation_log = self._get_or_create_menu('操作日志', 'operation-log', 'system/operation-log/index', 'icon-file', menu_system, 9)
-        menu_login_log = self._get_or_create_menu('登录日志', 'login-log', 'system/login-log/index', 'icon-user', menu_system, 10)
-        menu_codegen = self._get_or_create_menu('代码生成器', 'codegen', 'system/codegen/index', 'icon-tiktok-color', menu_system, 0)
-        menu_example = self._get_or_create_menu('示例管理', 'example', 'curdexample/index', 'icon-swap', menu_system, 8)
-        self.stdout.write(self.style.SUCCESS(f'  ✓ 创建菜单: {menu_system.title} 及其子菜单'))
+        menu_system = self._get_or_create_menu('系统管理', 'system', '', 'icon-settings', None, 1)
+        menu_monitor_root = self._get_or_create_menu('系统监控', 'monitor', '', 'icon-dashboard', None, 2)
+        menu_tools = self._get_or_create_menu('系统工具', 'tools', '', 'icon-tool', None, 3)
+
+        # 系统管理
+        menu_user = self._get_or_create_menu('用户管理', 'user', 'system/user/index', 'icon-user', menu_system, 1)
+        menu_role = self._get_or_create_menu('角色管理', 'role', 'system/role/index', 'icon-idcard', menu_system, 2)
+        menu_menu = self._get_or_create_menu('菜单管理', 'menu', 'system/menu/index', 'icon-menu', menu_system, 3)
+        menu_permission = self._get_or_create_menu('权限管理', 'permission', 'system/permission/index', 'icon-safe', menu_system, 4)
+        menu_org = self._get_or_create_menu('组织管理', 'organization', 'system/organization/index', 'icon-apps', menu_system, 5)
+
+        # 系统监控
+        menu_monitor = self._get_or_create_menu('监控概览', 'monitor-dashboard', 'system/monitor/index', 'icon-dashboard', menu_monitor_root, 1)
+        menu_operation_log = self._get_or_create_menu('操作日志', 'operation-log', 'system/operation-log/index', 'icon-file', menu_monitor_root, 2)
+        menu_login_log = self._get_or_create_menu('登录日志', 'login-log', 'system/login-log/index', 'icon-user', menu_monitor_root, 3)
+        menu_tasks = self._get_or_create_menu('任务管理', 'task', 'system/task/index', 'icon-schedule', menu_monitor_root, 4)
+
+        # 系统工具
+        menu_codegen = self._get_or_create_menu('代码生成器', 'codegen', 'system/codegen/index', 'icon-code', menu_tools, 1)
+        menu_example = self._get_or_create_menu('示例管理', 'example', 'curdexample/index', 'icon-apps', menu_tools, 2)
+
+        self.stdout.write(self.style.SUCCESS('  ✓ 创建菜单: 系统管理 / 系统监控 / 系统工具 分组完成'))
 
         # 3. 创建权限
         self.stdout.write('创建权限...')
@@ -113,25 +123,25 @@ class Command(BaseCommand):
         
         # 系统监控权限
         perms.append(self._get_or_create_permission('系统监控查看', 'system:metrics', 'GET', '/api/rbac/system/metrics/', menu_monitor))
-        # 代码生成器权限
-        perms.append(self._get_or_create_permission('代码生成', 'codegen:generate', 'POST', '/api/codegen/generate/', menu_codegen))
-        # 任务管理权限
+        # 任务管理权限（归属监控）
         perms.append(self._get_or_create_permission('任务列表', 'tasks:list', 'GET', '/api/tasks/tasks/', menu_tasks))
         perms.append(self._get_or_create_permission('任务创建', 'tasks:create', 'POST', '/api/tasks/tasks/', menu_tasks))
-        perms.append(self._get_or_create_permission('任务更新', 'tasks:update', 'PUT', r'/api/tasks/tasks/\d+/', menu_tasks))
-        perms.append(self._get_or_create_permission('任务删除', 'tasks:delete', 'DELETE', r'/api/tasks/tasks/\d+/', menu_tasks))
-        perms.append(self._get_or_create_permission('任务立即执行', 'tasks:run_now', 'POST', r'/api/tasks/tasks/\d+/run_now/', menu_tasks))
+        perms.append(self._get_or_create_permission('任务更新', 'tasks:update', 'PUT', r'/api/tasks/tasks/\\d+/', menu_tasks))
+        perms.append(self._get_or_create_permission('任务删除', 'tasks:delete', 'DELETE', r'/api/tasks/tasks/\\d+/', menu_tasks))
+        perms.append(self._get_or_create_permission('任务立即执行', 'tasks:run_now', 'POST', r'/api/tasks/tasks/\\d+/run_now/', menu_tasks))
         # 操作日志权限
         perms.append(self._get_or_create_permission('操作日志列表', 'operation_log:list', 'GET', '/api/audit/logs/', menu_operation_log))
         perms.append(self._get_or_create_permission('操作日志查看', 'operation_log:view', 'GET', r'/api/audit/logs/\d+/', menu_operation_log))
-        # 登录日志权限
+        # 登录日志权限（归属监控）
         perms.append(self._get_or_create_permission('登录日志列表', 'login_log:list', 'GET', '/api/audit/login-logs/', menu_login_log))
-        perms.append(self._get_or_create_permission('登录日志查看', 'login_log:view', 'GET', r'/api/audit/login-logs/\d+/', menu_login_log))
-        # 示例管理权限（curdexample）
+        perms.append(self._get_or_create_permission('登录日志查看', 'login_log:view', 'GET', r'/api/audit/login-logs/\\d+/', menu_login_log))
+        # 代码生成（归属系统工具）
+        perms.append(self._get_or_create_permission('代码生成', 'codegen:generate', 'POST', '/api/codegen/generate/', menu_codegen))
+        # 示例管理权限（curdexample，归属工具）
         perms.append(self._get_or_create_permission('示例列表', 'example:list', 'GET', '/api/curd/example/', menu_example))
         perms.append(self._get_or_create_permission('示例创建', 'example:create', 'POST', '/api/curd/example/', menu_example))
-        perms.append(self._get_or_create_permission('示例更新', 'example:update', 'PUT', r'/api/curd/example/\d+/', menu_example))
-        perms.append(self._get_or_create_permission('示例删除', 'example:delete', 'DELETE', r'/api/curd/example/\d+/', menu_example))
+        perms.append(self._get_or_create_permission('示例更新', 'example:update', 'PUT', r'/api/curd/example/\\d+/', menu_example))
+        perms.append(self._get_or_create_permission('示例删除', 'example:delete', 'DELETE', r'/api/curd/example/\\d+/', menu_example))
 
         self.stdout.write(self.style.SUCCESS(f'  ✓ 创建权限: {len(perms)} 个'))
 
@@ -139,7 +149,16 @@ class Command(BaseCommand):
         self.stdout.write('创建角色...')
         role_admin = self._get_or_create_role('超级管理员', 'ADMIN', '拥有所有权限', 'ALL')
         role_admin.permissions.set(perms)
-        role_admin.menus.set([menu_dashboard, menu_system, menu_user, menu_role, menu_menu, menu_permission, menu_org, menu_monitor, menu_tasks, menu_operation_log, menu_login_log, menu_codegen, menu_example])
+        role_admin.menus.set([
+            # 顶级
+            menu_dashboard, menu_system, menu_monitor_root, menu_tools,
+            # 系统管理
+            menu_user, menu_role, menu_menu, menu_permission, menu_org,
+            # 系统监控
+            menu_monitor, menu_operation_log, menu_login_log, menu_tasks,
+            # 系统工具
+            menu_codegen, menu_example,
+        ])
         role_admin.custom_data_organizations.set([org_root, org_admin])
         
         role_user = self._get_or_create_role('普通用户', 'USER', '普通用户角色', 'SELF')
