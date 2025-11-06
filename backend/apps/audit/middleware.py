@@ -25,8 +25,8 @@ class OperationLogMiddleware(MiddlewareMixin):
 
     # 排除的路径（不记录日志）
     EXCLUDE_PATHS = [
-        '/api/rbac/login/',
-        '/api/rbac/logout/',
+        '/api/rbac/auth/login/',
+        '/api/rbac/auth/logout/',
         '/api/rbac/system/metrics/',
         '/api/rbac/system/menu/tree/',
         '/api/rbac/system/organization/tree/',

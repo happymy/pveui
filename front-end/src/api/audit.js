@@ -18,3 +18,14 @@ export function getOperationLogDetail(id) {
   })
 }
 
+/**
+ * 登录日志 API
+ */
+export function getLoginLogList(params) {
+  return request({
+    url: '/api/audit/login-logs/',
+    method: 'get',
+    params
+  })
+}
+

@@ -33,6 +33,7 @@ from .serializers import (
     UserCreateSerializer,
     UserUpdateSerializer,
 )
+from apps.audit.models import OperationLog
 
 
 class DefaultPermission(permissions.IsAuthenticated):
@@ -338,14 +339,79 @@ class LoginView(APIView):
         username = request.data.get('username')
         password = request.data.get('password')
         if not username or not password:
+            # 记录登录失败日志（参数缺失）
+            try:
+                OperationLog.objects.create(
+                    user=None,
+                    username=username or '',
+                    action_type=OperationLog.ACTION_LOGIN,
+                    request_path=request.path,
+                    request_method='POST',
+                    request_params={'body': {'username': username or '', 'password': '***'}},
+                    ip_address=request.META.get('REMOTE_ADDR', ''),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    error_message='用户名或密码不能为空',
+                )
+            except Exception:
+                pass
             return Response({"detail": "用户名或密码不能为空"}, status=status.HTTP_400_BAD_REQUEST)
         user = authenticate(request, username=username, password=password)
         if user is None:
+            # 记录登录失败日志（认证失败）
+            try:
+                OperationLog.objects.create(
+                    user=None,
+                    username=username or '',
+                    action_type=OperationLog.ACTION_LOGIN,
+                    request_path=request.path,
+                    request_method='POST',
+                    request_params={'body': {'username': username or '', 'password': '***'}},
+                    ip_address=request.META.get('REMOTE_ADDR', ''),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    error_message='用户名或密码错误',
+                )
+            except Exception:
+                pass
             return Response({"detail": "用户名或密码错误"}, status=status.HTTP_400_BAD_REQUEST)
         if not user.is_active:
+            # 记录登录失败日志（未启用）
+            try:
+                OperationLog.objects.create(
+                    user=user,
+                    username=getattr(user, 'username', '') or username or '',
+                    action_type=OperationLog.ACTION_LOGIN,
+                    request_path=request.path,
+                    request_method='POST',
+                    request_params={'body': {'username': username or '', 'password': '***'}},
+                    ip_address=request.META.get('REMOTE_ADDR', ''),
+                    user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    error_message='用户未启用',
+                )
+            except Exception:
+                pass
             return Response({"detail": "用户未启用"}, status=status.HTTP_403_FORBIDDEN)
 
         login(request, user)
+
+        # 记录登录成功日志
+        try:
+            OperationLog.objects.create(
+                user=user,
+                username=getattr(user, 'username', '') or username or '',
+                action_type=OperationLog.ACTION_LOGIN,
+                request_path=request.path,
+                request_method='POST',
+                request_params={'body': {'username': username or '', 'password': '***'}},
+                ip_address=request.META.get('REMOTE_ADDR', ''),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                status_code=status.HTTP_200_OK,
+                error_message='',
+            )
+        except Exception:
+            pass
 
         role_qs = Role.objects.filter(user_roles__user=user).distinct()
         perm_qs = Permission.objects.filter(roles__in=role_qs, is_active=True).distinct()
@@ -364,7 +430,25 @@ class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):  # noqa: D401
+        user = request.user if (hasattr(request, 'user') and request.user.is_authenticated) else None
+        username = getattr(user, 'username', '') if user else ''
         logout(request)
+        # 记录登出日志
+        try:
+            OperationLog.objects.create(
+                user=user,
+                username=username,
+                action_type=OperationLog.ACTION_LOGOUT,
+                request_path=request.path,
+                request_method='POST',
+                request_params={},
+                ip_address=request.META.get('REMOTE_ADDR', ''),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                status_code=status.HTTP_200_OK,
+                error_message='',
+            )
+        except Exception:
+            pass
         return Response({"detail": "退出成功"})
 
 

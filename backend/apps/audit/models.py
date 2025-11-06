@@ -24,6 +24,8 @@ class OperationLog(models.Model):
     ACTION_VIEW = 'view'
     ACTION_LIST = 'list'
     ACTION_OTHER = 'other'
+    ACTION_LOGIN = 'login'
+    ACTION_LOGOUT = 'logout'
 
     ACTION_CHOICES = [
         (ACTION_CREATE, '创建'),
@@ -31,6 +33,8 @@ class OperationLog(models.Model):
         (ACTION_DELETE, '删除'),
         (ACTION_VIEW, '查看'),
         (ACTION_LIST, '列表'),
+        (ACTION_LOGIN, '登录'),
+        (ACTION_LOGOUT, '登出'),
         (ACTION_OTHER, '其他'),
     ]
 

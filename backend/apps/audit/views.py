@@ -36,3 +36,17 @@ class OperationLogViewSet(viewsets.ReadOnlyModelViewSet):
     search_fields = ['username', 'request_path', 'object_repr', 'ip_address', 'error_message']
     ordering_fields = ['created_at', 'id']
 
+
+class LoginLogViewSet(viewsets.ReadOnlyModelViewSet):
+    """登录日志视图集：只读，过滤登录/登出类型。"""
+
+    queryset = OperationLog.objects.filter(
+        action_type__in=[OperationLog.ACTION_LOGIN, OperationLog.ACTION_LOGOUT]
+    ).select_related('user').order_by('-created_at')
+    serializer_class = OperationLogSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    pagination_class = LargePageSizePagination
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['username', 'ip_address', 'user_agent']
+    ordering_fields = ['created_at', 'id']
