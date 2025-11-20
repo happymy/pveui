@@ -59,6 +59,7 @@ INSTALLED_APPS = [
     'apps.system.apps.SystemConfig',
     'apps.office.apps.OfficeConfig',
     'apps.knowledge.apps.KnowledgeConfig',
+    'apps.customer_service.apps.CustomerServiceConfig',
 ]
 
 MIDDLEWARE = [

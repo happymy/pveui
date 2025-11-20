@@ -65,7 +65,8 @@ class Command(BaseCommand):
         menu_monitor_root = self._get_or_create_menu('系统监控', 'monitor', '', 'icon-dashboard', None, 2)
         menu_tools = self._get_or_create_menu('系统工具', 'tools', '', 'icon-tool', None, 3)
         menu_office = self._get_or_create_menu('系统办公', 'office', '', 'icon-file', None, 4)
-        menu_knowledge_root = self._get_or_create_menu('知识库', 'knowledge', '', 'icon-book', None, 5)
+        menu_support = self._get_or_create_menu('客服中心', 'support', '', 'icon-customer-service', None, 5)
+        menu_knowledge_root = self._get_or_create_menu('知识库', 'knowledge', '', 'icon-book', None, 6)
         menu_tools_sheet = self._get_or_create_menu('在线表格', 'spreadsheet', 'tools/spreadsheet/index', 'icon-apps', menu_tools, 3)
 
         # 系统管理
@@ -89,6 +90,8 @@ class Command(BaseCommand):
 
         # 系统办公
         menu_document = self._get_or_create_menu('在线文档', 'document', 'office/document/index', 'icon-file', menu_office, 1)
+        # 客服中心
+        menu_support_workbench = self._get_or_create_menu('客服工作台', 'support-workbench', 'support/workbench/index', 'icon-service', menu_support, 1)
         # 知识库
         menu_knowledge_article = self._get_or_create_menu('知识文章', 'knowledge-article', 'knowledge/article/index', 'icon-book', menu_knowledge_root, 1)
 
@@ -169,6 +172,15 @@ class Command(BaseCommand):
         perms.append(self._get_or_create_permission('文档部分更新', 'document:partial_update', 'PATCH', r'/api/office/documents/\\d+/', menu_document))
         perms.append(self._get_or_create_permission('文档删除', 'document:delete', 'DELETE', r'/api/office/documents/\\d+/', menu_document))
         perms.append(self._get_or_create_permission('文档置顶', 'document:toggle_pin', 'POST', r'/api/office/documents/\\d+/toggle_pin/', menu_document))
+        # 客服中心权限
+        perms.append(self._get_or_create_permission('客服会话列表', 'cs_session:list', 'GET', '/api/customer-service/sessions/', menu_support_workbench))
+        perms.append(self._get_or_create_permission('客服会话分配', 'cs_session:assign', 'POST', r'/api/customer-service/sessions/\\d+/assign/', menu_support_workbench))
+        perms.append(self._get_or_create_permission('客服会话关闭', 'cs_session:close', 'POST', r'/api/customer-service/sessions/\\d+/close/', menu_support_workbench))
+        perms.append(self._get_or_create_permission('客服消息列表', 'cs_message:list', 'GET', '/api/customer-service/messages/', menu_support_workbench))
+        perms.append(self._get_or_create_permission('访客会话初始化', 'cs_guest:session_init', 'POST', '/api/customer-service/guest/session/', menu_support_workbench))
+        perms.append(self._get_or_create_permission('访客消息发送', 'cs_guest:message_send', 'POST', '/api/customer-service/guest/messages/', menu_support_workbench))
+        perms.append(self._get_or_create_permission('访客历史消息', 'cs_guest:message_history', 'GET', '/api/customer-service/guest/messages/history/', menu_support_workbench))
+
         # 知识库权限
         perms.append(self._get_or_create_permission('知识库列表', 'knowledge:list', 'GET', '/api/knowledge/articles/', menu_knowledge_article))
         perms.append(self._get_or_create_permission('知识库创建', 'knowledge:create', 'POST', '/api/knowledge/articles/', menu_knowledge_article))
@@ -194,6 +206,8 @@ class Command(BaseCommand):
             menu_codegen, menu_example, menu_tools_sheet,
             # 系统办公
             menu_document,
+            # 客服中心
+            menu_support_workbench,
             # 知识库
             menu_knowledge_article,
         ])
