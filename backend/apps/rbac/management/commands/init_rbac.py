@@ -66,6 +66,7 @@ class Command(BaseCommand):
         menu_tools = self._get_or_create_menu('系统工具', 'tools', '', 'icon-tool', None, 3)
         menu_office = self._get_or_create_menu('系统办公', 'office', '', 'icon-file', None, 4)
         menu_knowledge_root = self._get_or_create_menu('知识库', 'knowledge', '', 'icon-book', None, 5)
+        menu_tools_sheet = self._get_or_create_menu('在线表格', 'spreadsheet', 'tools/spreadsheet/index', 'icon-apps', menu_tools, 3)
 
         # 系统管理
         menu_user = self._get_or_create_menu('用户管理', 'user', 'system/user/index', 'icon-user', menu_system, 1)
@@ -190,7 +191,7 @@ class Command(BaseCommand):
             # 系统监控
             menu_monitor, menu_operation_log, menu_login_log, menu_tasks,
             # 系统工具
-            menu_codegen, menu_example,
+            menu_codegen, menu_example, menu_tools_sheet,
             # 系统办公
             menu_document,
             # 知识库
