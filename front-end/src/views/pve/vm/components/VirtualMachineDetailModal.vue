@@ -95,13 +95,13 @@ const visibleProxy = computed({
   set: (val) => emit('update:visible', val)
 })
 
-const detailLoading = ref(false)
-const detailActiveTab = ref('overview')
-const detailModalWidth = ref(960)
-const currentVM = ref(null)
+ const detailLoading = ref(false)
+ const detailActiveTab = ref('overview')
+ const detailModalWidth = ref(960)
+ const currentVM = ref(null)
 
 
-const getStatusColor = (status) => {
+ const getStatusColor = (status) => {
   const colorMap = {
     running: 'green',
     stopped: 'red',
@@ -157,41 +157,43 @@ watch(
   () => props.visible,
   (val) => {
     if (val) {
-      loadDetail()
-    } else {
-      currentVM.value = null
-    }
+       loadDetail()
+     } else {
+       currentVM.value = null
+     }
   }
 )
 
 watch(
   () => props.vmId,
-  (val, oldVal) => {
-    if (props.visible && val !== oldVal) {
-      loadDetail()
+   (val, oldVal) => {
+     if (props.visible && val !== oldVal) {
+       loadDetail()
     }
   }
 )
 
-onMounted(() => {
-  updateDetailWidth()
-  window.addEventListener('resize', updateDetailWidth)
-  if (props.visible) {
-    loadDetail()
-  }
-})
+ onMounted(() => {
+   updateDetailWidth()
+   window.addEventListener('resize', updateDetailWidth)
+   if (props.visible) {
+     loadDetail()
+   }
+ })
 
-onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateDetailWidth)
-})
+ onBeforeUnmount(() => {
+   window.removeEventListener('resize', updateDetailWidth)
+ })
 </script>
 
 <style scoped>
 .vm-detail {
   width: 100%;
-  overflow: hidden;
   max-width: 100%;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 200px);
 }
 
 .vm-detail-header {
@@ -199,6 +201,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  flex-shrink: 0;
 }
 
 .vm-detail-name {
@@ -212,15 +215,32 @@ onBeforeUnmount(() => {
   margin-top: 4px;
 }
 
-/* 确保控制台 tab 下的卡片不会超出视口 */
+/* 确保 tabs 区域不会超出，内容在各自 tab 内滚动 */
+:deep(.arco-tabs) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 :deep(.arco-tabs-content) {
   overflow-x: hidden;
   max-width: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 :deep(.arco-tabs-content .arco-card) {
   max-width: 100%;
   overflow-x: hidden;
+}
+
+:deep(.arco-tabs-content-list) {
+  height: 100%;
+}
+
+:deep(.arco-tabs-pane) {
+  height: 100%;
 }
 </style>
 

@@ -17,6 +17,7 @@
         :data="snapshots"
         :loading="loading"
         :pagination="false"
+        :scroll="{ y: 400 }"
         size="small"
         row-key="name"
       >
@@ -230,6 +231,22 @@ onMounted(() => {
 <style scoped>
 .vm-snapshot-tab {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vm-snapshot-tab :deep(.arco-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vm-snapshot-tab :deep(.arco-card-body) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .snapshot-header {

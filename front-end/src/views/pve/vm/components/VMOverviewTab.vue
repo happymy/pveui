@@ -68,6 +68,8 @@ const overviewData = computed(() => {
 <style scoped>
 .vm-overview-tab {
   width: 100%;
+  max-height: 500px;
+  overflow-y: auto;
 }
 </style>
 

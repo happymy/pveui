@@ -37,6 +37,22 @@ const configEntries = computed(() => {
 <style scoped>
 .vm-config-tab {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vm-config-tab :deep(.arco-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vm-config-tab :deep(.arco-card-body) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  max-height: 500px;
 }
 
 .config-pre {

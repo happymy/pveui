@@ -22,6 +22,7 @@
         :columns="hardwareColumns"
         :data="hardwareRows"
         :pagination="false"
+        :scroll="{ y: 400 }"
         size="small"
       >
         <template #value="{ record }">
@@ -1156,12 +1157,29 @@ onMounted(() => {
 <style scoped>
 .vm-hardware-tab {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vm-hardware-tab :deep(.arco-card) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.vm-hardware-tab :deep(.arco-card-body) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .hardware-toolbar {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .hardware-value {
