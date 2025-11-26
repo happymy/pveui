@@ -99,6 +99,70 @@
             />
           </a-form-item>
         </template>
+        <template v-else-if="editState.type === 'efi'">
+          <a-form-item field="efiValue" label="EFI 磁盘">
+            <a-input v-model="editForm.efiValue" placeholder="示例：local-lvm:1,efitype=4m,pre-enrolled-keys=1" />
+            <template #extra>
+              直接使用PVE格式，如：local-lvm:1,efitype=4m,pre-enrolled-keys=1
+            </template>
+          </a-form-item>
+        </template>
+        <template v-else-if="editState.type === 'tpm'">
+          <a-form-item field="tpmValue" label="TPM 设备">
+            <a-input v-model="editForm.tpmValue" placeholder="示例：local-lvm:4,version=v2.0,model=tpm-crb" />
+            <template #extra>
+              直接使用PVE格式，如：local-lvm:4,version=v2.0,model=tpm-crb
+            </template>
+          </a-form-item>
+        </template>
+        <template v-else-if="editState.type === 'usb'">
+          <a-form-item field="usbValue" label="USB 设备">
+            <a-input v-model="editForm.usbValue" placeholder="示例：1234:abcd,usb3=1" />
+            <template #extra>
+              直接使用PVE格式，如：1234:abcd,usb3=1
+            </template>
+          </a-form-item>
+        </template>
+        <template v-else-if="editState.type === 'pci'">
+          <a-form-item field="pciValue" label="PCI 设备">
+            <a-input v-model="editForm.pciValue" placeholder="示例：0000:00:14.0,pcie=1" />
+            <template #extra>
+              直接使用PVE格式，如：0000:00:14.0,pcie=1
+            </template>
+          </a-form-item>
+        </template>
+        <template v-else-if="editState.type === 'serial'">
+          <a-form-item field="serialValue" label="串口">
+            <a-input v-model="editForm.serialValue" placeholder="示例：socket 或 socket,path=/var/run/qemu-server/serial0" />
+            <template #extra>
+              直接使用PVE格式，如：socket 或 socket,path=/var/run/qemu-server/serial0
+            </template>
+          </a-form-item>
+        </template>
+        <template v-else-if="editState.type === 'audio'">
+          <a-form-item field="audioValue" label="音频设备">
+            <a-input v-model="editForm.audioValue" placeholder="示例：device=ich9-intel-hda,driver=spice" />
+            <template #extra>
+              直接使用PVE格式，如：device=ich9-intel-hda,driver=spice
+            </template>
+          </a-form-item>
+        </template>
+        <template v-else-if="editState.type === 'rng'">
+          <a-form-item field="rngValue" label="随机数设备">
+            <a-input v-model="editForm.rngValue" placeholder="示例：source=/dev/urandom" />
+            <template #extra>
+              直接使用PVE格式，如：source=/dev/urandom
+            </template>
+          </a-form-item>
+        </template>
+        <template v-else-if="editState.type === 'virtiofs'">
+          <a-form-item field="virtiofsValue" label="Virtiofs">
+            <a-input v-model="editForm.virtiofsValue" placeholder="示例：mount_tag=share,path=/mnt/share" />
+            <template #extra>
+              直接使用PVE格式，如：mount_tag=share,path=/mnt/share
+            </template>
+          </a-form-item>
+        </template>
       </a-form>
 
       <div class="edit-footer">
@@ -492,21 +556,21 @@ const hardwareRows = computed(() => {
   })
 
   if (config.efidisk0) {
-    rows.push({ key: 'efidisk0', label: 'EFI 磁盘', value: config.efidisk0, editable: false })
+    rows.push({ key: 'efidisk0', label: 'EFI 磁盘', value: config.efidisk0, editable: true, editType: 'efi' })
   }
   if (config.tpmstate0) {
-    rows.push({ key: 'tpmstate0', label: 'TPM', value: config.tpmstate0, editable: false })
+    rows.push({ key: 'tpmstate0', label: 'TPM', value: config.tpmstate0, editable: true, editType: 'tpm' })
   }
   if (config.usb0) {
-    rows.push({ key: 'usb0', label: 'USB 设备', value: config.usb0, editable: false })
+    rows.push({ key: 'usb0', label: 'USB 设备', value: config.usb0, editable: true, editType: 'usb' })
   }
   if (config.hostpci0) {
-    rows.push({ key: 'hostpci0', label: 'PCI 设备', value: config.hostpci0, editable: false })
+    rows.push({ key: 'hostpci0', label: 'PCI 设备', value: config.hostpci0, editable: true, editType: 'pci' })
   }
-  if (config.serial0) rows.push({ key: 'serial0', label: '串口', value: config.serial0, editable: false })
-  if (config.audio0) rows.push({ key: 'audio0', label: '音频', value: config.audio0, editable: false })
-  if (config.rng0) rows.push({ key: 'rng0', label: '随机数设备', value: config.rng0, editable: false })
-  if (config.virtiofs0) rows.push({ key: 'virtiofs0', label: 'Virtiofs', value: config.virtiofs0, editable: false })
+  if (config.serial0) rows.push({ key: 'serial0', label: '串口', value: config.serial0, editable: true, editType: 'serial' })
+  if (config.audio0) rows.push({ key: 'audio0', label: '音频', value: config.audio0, editable: true, editType: 'audio' })
+  if (config.rng0) rows.push({ key: 'rng0', label: '随机数设备', value: config.rng0, editable: true, editType: 'rng' })
+  if (config.virtiofs0) rows.push({ key: 'virtiofs0', label: 'Virtiofs', value: config.virtiofs0, editable: true, editType: 'virtiofs' })
 
   return rows
 })
@@ -614,6 +678,54 @@ const openEditDialog = (type, targetKey = '') => {
         networkValue: config[editState.targetKey || 'net0'] || ''
       })
       break
+    case 'efi':
+      editState.title = '编辑 EFI 磁盘'
+      Object.assign(editForm, {
+        efiValue: config.efidisk0 || ''
+      })
+      break
+    case 'tpm':
+      editState.title = '编辑 TPM 设备'
+      Object.assign(editForm, {
+        tpmValue: config.tpmstate0 || ''
+      })
+      break
+    case 'usb':
+      editState.title = '编辑 USB 设备'
+      Object.assign(editForm, {
+        usbValue: config.usb0 || ''
+      })
+      break
+    case 'pci':
+      editState.title = '编辑 PCI 设备'
+      Object.assign(editForm, {
+        pciValue: config.hostpci0 || ''
+      })
+      break
+    case 'serial':
+      editState.title = '编辑串口'
+      Object.assign(editForm, {
+        serialValue: config.serial0 || ''
+      })
+      break
+    case 'audio':
+      editState.title = '编辑音频设备'
+      Object.assign(editForm, {
+        audioValue: config.audio0 || ''
+      })
+      break
+    case 'rng':
+      editState.title = '编辑随机数设备'
+      Object.assign(editForm, {
+        rngValue: config.rng0 || ''
+      })
+      break
+    case 'virtiofs':
+      editState.title = '编辑 Virtiofs'
+      Object.assign(editForm, {
+        virtiofsValue: config.virtiofs0 || ''
+      })
+      break
     default:
       editState.title = '编辑硬件'
       break
@@ -644,6 +756,38 @@ const editFormRules = computed(() => {
       return {
         networkValue: [{ required: true, message: '请输入网络配置' }]
       }
+    case 'efi':
+      return {
+        efiValue: [{ required: true, message: '请输入EFI配置' }]
+      }
+    case 'tpm':
+      return {
+        tpmValue: [{ required: true, message: '请输入TPM配置' }]
+      }
+    case 'usb':
+      return {
+        usbValue: [{ required: true, message: '请输入USB配置' }]
+      }
+    case 'pci':
+      return {
+        pciValue: [{ required: true, message: '请输入PCI配置' }]
+      }
+    case 'serial':
+      return {
+        serialValue: [{ required: true, message: '请输入串口配置' }]
+      }
+    case 'audio':
+      return {
+        audioValue: [{ required: true, message: '请输入音频配置' }]
+      }
+    case 'rng':
+      return {
+        rngValue: [{ required: true, message: '请输入随机数设备配置' }]
+      }
+    case 'virtiofs':
+      return {
+        virtiofsValue: [{ required: true, message: '请输入Virtiofs配置' }]
+      }
     default:
       return {}
   }
@@ -670,6 +814,22 @@ const buildParams = () => {
       return editState.targetKey
         ? { [editState.targetKey]: editForm.networkValue }
         : { net0: editForm.networkValue }
+    case 'efi':
+      return { efidisk0: editForm.efiValue }
+    case 'tpm':
+      return { tpmstate0: editForm.tpmValue }
+    case 'usb':
+      return { usb0: editForm.usbValue }
+    case 'pci':
+      return { hostpci0: editForm.pciValue }
+    case 'serial':
+      return { serial0: editForm.serialValue }
+    case 'audio':
+      return { audio0: editForm.audioValue }
+    case 'rng':
+      return { rng0: editForm.rngValue }
+    case 'virtiofs':
+      return { virtiofs0: editForm.virtiofsValue }
     default:
       return {}
   }

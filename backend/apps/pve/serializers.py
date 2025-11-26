@@ -139,3 +139,37 @@ class VirtualMachineHardwareUpdateSerializer(serializers.Serializer):
         allow_empty=False,
         help_text='需要更新的硬件配置参数（键值对）'
     )
+
+
+class VMBackupCreateSerializer(serializers.Serializer):
+    """创建虚拟机备份序列化器。"""
+    
+    storage = serializers.CharField(help_text='备份目标存储')
+    mode = serializers.ChoiceField(
+        choices=['snapshot', 'suspend', 'stop'],
+        default='snapshot',
+        required=False,
+        help_text='备份模式（snapshot/suspend/stop）'
+    )
+    compress = serializers.ChoiceField(
+        choices=['zstd', 'lzo', 'gzip', 'none'],
+        default='zstd',
+        required=False,
+        help_text='压缩算法'
+    )
+    remove = serializers.BooleanField(default=False, required=False, help_text='备份完成后是否删除旧备份')
+    notes = serializers.CharField(required=False, allow_blank=True, help_text='备份备注')
+
+
+class VMSnapshotCreateSerializer(serializers.Serializer):
+    """创建虚拟机快照序列化器。"""
+    
+    name = serializers.CharField(max_length=64, help_text='快照名称')
+    description = serializers.CharField(required=False, allow_blank=True, help_text='快照描述')
+    include_memory = serializers.BooleanField(default=False, required=False, help_text='是否包含内存')
+
+
+class VMSnapshotActionSerializer(serializers.Serializer):
+    """快照操作序列化器（删除/回滚）。"""
+    
+    name = serializers.CharField(max_length=64, help_text='快照名称')

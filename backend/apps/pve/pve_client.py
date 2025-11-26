@@ -289,3 +289,45 @@ class PVEAPIClient:
             # 如果API返回格式不符合预期，回退到默认值
             return 100
 
+    def list_snapshots(self, node: str, vmid: int) -> List[Dict]:
+        """获取虚拟机快照列表。"""
+        result = self._request('GET', f'/nodes/{node}/qemu/{vmid}/snapshot')
+        if isinstance(result, list):
+            return result
+        elif isinstance(result, dict):
+            return [result]
+        return []
+
+    def create_snapshot(self, node: str, vmid: int, name: str, description: str = '', include_memory: bool = False) -> Dict:
+        """创建虚拟机快照。"""
+        params = {
+            'snapname': name,
+            'description': description or '',
+            'vmstate': 1 if include_memory else 0
+        }
+        return self._request('POST', f'/nodes/{node}/qemu/{vmid}/snapshot', params=params)
+
+    def rollback_snapshot(self, node: str, vmid: int, snapshot_name: str) -> Dict:
+        """回滚到指定快照。"""
+        return self._request('POST', f'/nodes/{node}/qemu/{vmid}/snapshot/{snapshot_name}/rollback')
+
+    def delete_snapshot(self, node: str, vmid: int, snapshot_name: str) -> Dict:
+        """删除指定快照。"""
+        return self._request('DELETE', f'/nodes/{node}/qemu/{vmid}/snapshot/{snapshot_name}')
+
+    def create_backup(self, node: str, vmid: int, storage: str, mode: str = 'snapshot',
+                      compress: str = 'zstd', remove: bool = False, notes: str = '') -> Dict:
+        """
+        创建虚拟机备份（触发vzdump任务）。
+        """
+        params = {
+            'vmid': vmid,
+            'storage': storage,
+            'mode': mode,
+            'compress': compress,
+            'remove': 1 if remove else 0
+        }
+        if notes:
+            params['notes'] = notes
+        return self._request('POST', f'/nodes/{node}/vzdump', params=params)
+

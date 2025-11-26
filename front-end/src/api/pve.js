@@ -216,3 +216,49 @@ export function createVMConsoleSession(id, data) {
   })
 }
 
+export function getVMBackups(id) {
+  return request({
+    url: `/api/pve/virtual-machines/${id}/backups/`,
+    method: 'get'
+  })
+}
+
+export function createVMBackup(id, data) {
+  return request({
+    url: `/api/pve/virtual-machines/${id}/create_backup/`,
+    method: 'post',
+    data
+  })
+}
+
+export function getVMSnapshots(id) {
+  return request({
+    url: `/api/pve/virtual-machines/${id}/snapshots/`,
+    method: 'get'
+  })
+}
+
+export function createVMSnapshot(id, data) {
+  return request({
+    url: `/api/pve/virtual-machines/${id}/create_snapshot/`,
+    method: 'post',
+    data
+  })
+}
+
+export function rollbackVMSnapshot(id, data) {
+  return request({
+    url: `/api/pve/virtual-machines/${id}/rollback_snapshot/`,
+    method: 'post',
+    data
+  })
+}
+
+export function deleteVMSnapshot(id, data) {
+  return request({
+    url: `/api/pve/virtual-machines/${id}/delete_snapshot/`,
+    method: 'post',
+    data
+  })
+}
+

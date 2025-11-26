@@ -40,6 +40,18 @@
               @refresh="loadDetail"
             />
           </a-tab-pane>
+          <a-tab-pane key="backup" title="备份">
+            <VMBackupTab
+              :vm="currentVM"
+              :vm-id="vmId"
+            />
+          </a-tab-pane>
+          <a-tab-pane key="snapshot" title="快照">
+            <VMSnapshotTab
+              :vm="currentVM"
+              :vm-id="vmId"
+            />
+          </a-tab-pane>
           <a-tab-pane key="config" title="配置">
             <VMConfigTab :vm="currentVM" />
           </a-tab-pane>
@@ -58,6 +70,8 @@ import VMOverviewTab from './VMOverviewTab.vue'
 import VMConsoleTab from './VMConsoleTab.vue'
 import VMHardwareTab from './VMHardwareTab.vue'
 import VMConfigTab from './VMConfigTab.vue'
+import VMBackupTab from './VMBackupTab.vue'
+import VMSnapshotTab from './VMSnapshotTab.vue'
 
 const props = defineProps({
   visible: {

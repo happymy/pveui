@@ -35,6 +35,9 @@ from .serializers import (
     VirtualMachineCreateSerializer,
     VirtualMachineActionSerializer,
     VirtualMachineHardwareUpdateSerializer,
+    VMBackupCreateSerializer,
+    VMSnapshotCreateSerializer,
+    VMSnapshotActionSerializer,
 )
 from .pve_client import PVEAPIClient
 from .consumers import SESSION_CACHE_PREFIX
@@ -554,6 +557,239 @@ class VirtualMachineViewSet(AuditOwnerPopulateMixin, ActionSerializerMixin, view
             logger.exception('创建noVNC会话失败')
             return Response({
                 'detail': f'创建控制台会话失败: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'])
+    def backups(self, request, pk=None):
+        """获取虚拟机备份列表及可用存储。"""
+        vm = self.get_object()
+        try:
+            server = vm.server
+            client = PVEAPIClient(
+                host=server.host,
+                port=server.port,
+                token_id=server.token_id,
+                token_secret=server.token_secret,
+                verify_ssl=server.verify_ssl
+            )
+            storages = client.get_storage(vm.node)
+            backup_storages = []
+            backups = []
+
+            def supports_backup(storage_item):
+                content = storage_item.get('content')
+                if isinstance(content, str):
+                    entries = [c.strip() for c in content.split(',') if c.strip()]
+                elif isinstance(content, (list, tuple)):
+                    entries = list(content)
+                else:
+                    entries = []
+                return 'backup' in entries
+
+            for storage in storages:
+                if not supports_backup(storage):
+                    continue
+                storage_name = storage.get('storage')
+                backup_storages.append({
+                    'storage': storage_name,
+                    'type': storage.get('type'),
+                    'content': storage.get('content'),
+                    'shared': storage.get('shared'),
+                    'enabled': storage.get('enabled', 1),
+                    'total': storage.get('total'),
+                    'avail': storage.get('avail')
+                })
+                try:
+                    contents = client.get_storage_content(vm.node, storage_name, content_type='backup')
+                except Exception as e:
+                    logger.warning('获取备份列表失败 storage=%s: %s', storage_name, e)
+                    continue
+                for item in contents or []:
+                    if item.get('vmid') and str(item.get('vmid')) != str(vm.vmid):
+                        continue
+                    backups.append({
+                        'storage': storage_name,
+                        'volid': item.get('volid'),
+                        'size': item.get('size'),
+                        'format': item.get('format'),
+                        'ctime': item.get('ctime'),
+                        'notes': item.get('notes'),
+                        'vmid': item.get('vmid')
+                    })
+
+            return Response({
+                'backups': backups,
+                'storages': backup_storages
+            })
+        except Exception as e:
+            logger.exception('获取备份列表失败')
+            return Response({
+                'detail': f'获取备份列表失败: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def create_backup(self, request, pk=None):
+        """创建虚拟机备份。"""
+        vm = self.get_object()
+        serializer = VMBackupCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            server = vm.server
+            client = PVEAPIClient(
+                host=server.host,
+                port=server.port,
+                token_id=server.token_id,
+                token_secret=server.token_secret,
+                verify_ssl=server.verify_ssl
+            )
+            result = client.create_backup(
+                vm.node,
+                vm.vmid,
+                storage=data['storage'],
+                mode=data.get('mode', 'snapshot'),
+                compress=data.get('compress', 'zstd'),
+                remove=data.get('remove', False),
+                notes=data.get('notes', '')
+            )
+            return Response({
+                'success': True,
+                'upid': result
+            })
+        except Exception as e:
+            logger.exception('创建备份任务失败')
+            return Response({
+                'detail': f'创建备份失败: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['get'])
+    def snapshots(self, request, pk=None):
+        """获取虚拟机快照列表。"""
+        vm = self.get_object()
+        try:
+            server = vm.server
+            client = PVEAPIClient(
+                host=server.host,
+                port=server.port,
+                token_id=server.token_id,
+                token_secret=server.token_secret,
+                verify_ssl=server.verify_ssl
+            )
+            raw_snapshots = client.list_snapshots(vm.node, vm.vmid) or []
+
+            flat = []
+
+            def traverse(items, parent=None):
+                for item in items or []:
+                    name = item.get('name')
+                    entry = {
+                        'name': name,
+                        'description': item.get('description', ''),
+                        'snaptime': item.get('snaptime'),
+                        'parent': parent,
+                        'state': item.get('state'),
+                        'vmstate': item.get('vmstate', False),
+                        'running': item.get('running'),
+                        'is_current': name == 'current' or item.get('current', False)
+                    }
+                    flat.append(entry)
+                    children = item.get('children') or []
+                    if children:
+                        traverse(children, name)
+
+            traverse(raw_snapshots, None)
+            return Response({'snapshots': flat})
+        except Exception as e:
+            logger.exception('获取快照列表失败')
+            return Response({
+                'detail': f'获取快照列表失败: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def create_snapshot(self, request, pk=None):
+        """创建虚拟机快照。"""
+        vm = self.get_object()
+        serializer = VMSnapshotCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            server = vm.server
+            client = PVEAPIClient(
+                host=server.host,
+                port=server.port,
+                token_id=server.token_id,
+                token_secret=server.token_secret,
+                verify_ssl=server.verify_ssl
+            )
+            result = client.create_snapshot(
+                vm.node,
+                vm.vmid,
+                name=data['name'],
+                description=data.get('description', ''),
+                include_memory=data.get('include_memory', False)
+            )
+            return Response({
+                'success': True,
+                'upid': result
+            })
+        except Exception as e:
+            logger.exception('创建快照失败')
+            return Response({
+                'detail': f'创建快照失败: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def rollback_snapshot(self, request, pk=None):
+        """回滚到指定快照。"""
+        vm = self.get_object()
+        serializer = VMSnapshotActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            server = vm.server
+            client = PVEAPIClient(
+                host=server.host,
+                port=server.port,
+                token_id=server.token_id,
+                token_secret=server.token_secret,
+                verify_ssl=server.verify_ssl
+            )
+            result = client.rollback_snapshot(vm.node, vm.vmid, data['name'])
+            return Response({
+                'success': True,
+                'upid': result
+            })
+        except Exception as e:
+            logger.exception('回滚快照失败')
+            return Response({
+                'detail': f'回滚快照失败: {str(e)}'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def delete_snapshot(self, request, pk=None):
+        """删除指定快照。"""
+        vm = self.get_object()
+        serializer = VMSnapshotActionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        try:
+            server = vm.server
+            client = PVEAPIClient(
+                host=server.host,
+                port=server.port,
+                token_id=server.token_id,
+                token_secret=server.token_secret,
+                verify_ssl=server.verify_ssl
+            )
+            result = client.delete_snapshot(vm.node, vm.vmid, data['name'])
+            return Response({
+                'success': True,
+                'upid': result
+            })
+        except Exception as e:
+            logger.exception('删除快照失败')
+            return Response({
+                'detail': f'删除快照失败: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'])
