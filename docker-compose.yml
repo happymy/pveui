@@ -1,76 +1,23 @@
 version: '3.8'
 
 services:
-  # MySQL 数据库
-  db:
-    image: mysql:8.0
-    container_name: django-vue-adminx-db
-    environment:
-      MYSQL_DATABASE: django_vue_adminx
-      MYSQL_USER: django
-      MYSQL_PASSWORD: django123
-      MYSQL_ROOT_PASSWORD: root123
-    volumes:
-      - mysql_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot123"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   # Django 后端服务
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile.backend
+    image: registry.cn-beijing.aliyuncs.com/yuanbuluo/pveui:backend
     container_name: django-vue-adminx-backend
     command: >
       sh -c "python manage.py migrate --noinput &&
              python manage.py init_rbac --create-superuser 2>/dev/null || true &&
              gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 django_vue_adminx.wsgi:application"
-    volumes:
-      - ./backend:/app
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
     ports:
       - "8000:8000"
-    env_file:
-      - .env
-    environment:
-      - DEBUG=False
-      - DATABASE_URL=mysql://django:django123@db:3306/django_vue_adminx
-      - DB_NAME=django_vue_adminx
-      - DB_USER=django
-      - DB_PASSWORD=django123
-      - DB_HOST=db
-      - DB_PORT=3306
-      - SECRET_KEY=${SECRET_KEY:-django-insecure--mpclg7e91pkc&c+dz3lcf%=ddfye@9asvaf4z7xnjd9tpt#bb}
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/rbac/auth/login/')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Vue 前端服务
   frontend:
-    build:
-      context: ./front-end
-      dockerfile: Dockerfile
+    image: registry.cn-beijing.aliyuncs.com/yuanbuluo/pveui:front-end
     container_name: django-vue-adminx-frontend
     ports:
       - "80:80"
     depends_on:
       - backend
     restart: unless-stopped
-
-volumes:
-  mysql_data:
-  static_volume:
-  media_volume:
-
