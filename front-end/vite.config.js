@@ -10,7 +10,8 @@ export default defineConfig(({command}) => {
     resolve: {
       extensions: ['.vue', '.js'],
       alias: {
-        '@': resolve(__dirname, 'src')
+        '@': resolve(__dirname, 'src'),
+        '@novnc/novnc/core/rfb': resolve(__dirname, 'node_modules/@novnc/novnc/lib/rfb.js')
       }
     },
     plugins: [
