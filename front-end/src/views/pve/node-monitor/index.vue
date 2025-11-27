@@ -62,86 +62,82 @@
       </div>
     </a-card>
 
-    <a-row :gutter="16" class="summary-row">
-      <a-col :span="6">
-        <a-card class="stat-card" :bordered="false">
-          <div class="stat-header">
-            <span>CPU使用率</span>
-            <a-tag size="small">{{ summary.cpu.cores || '-' }} 核</a-tag>
-          </div>
-          <div class="stat-value">{{ summary.cpu.percent.toFixed(1) }}%</div>
-          <a-progress
-            :percent="summary.cpu.percent"
-            :status="getProgressStatus(summary.cpu.percent, [75, 90])"
-            stroke-width="6"
-          />
-          <div class="stat-desc">负载：{{ formatLoad(summary.cpu.loadavg) }}</div>
-        </a-card>
-      </a-col>
-      <a-col :span="6">
-        <a-card class="stat-card" :bordered="false">
-          <div class="stat-header">
-            <span>内存使用率</span>
-            <a-tag size="small">{{ formatBytes(summary.memory.used) }}/{{ formatBytes(summary.memory.total) }}</a-tag>
-          </div>
-          <div class="stat-value">{{ summary.memory.percent.toFixed(1) }}%</div>
-          <a-progress
-            :percent="summary.memory.percent"
-            :status="getProgressStatus(summary.memory.percent, [80, 90])"
-            stroke-width="6"
-          />
-          <div class="stat-desc">NUMA：{{ summary.memory.total ? '已启用/默认' : '-' }}</div>
-        </a-card>
-      </a-col>
-      <a-col :span="6">
-        <a-card class="stat-card" :bordered="false">
-          <div class="stat-header">
-            <span>存储使用率</span>
-            <a-tag size="small">{{ formatBytes(summary.storage.used) }}/{{ formatBytes(summary.storage.total) }}</a-tag>
-          </div>
-          <div class="stat-value">{{ summary.storage.percent.toFixed(1) }}%</div>
-          <a-progress
-            :percent="summary.storage.percent"
-            :status="getProgressStatus(summary.storage.percent, [80, 90])"
-            stroke-width="6"
-          />
-          <div class="stat-desc">根存储使用</div>
-        </a-card>
-      </a-col>
-      <a-col :span="6">
-        <a-card class="stat-card" :bordered="false">
-          <div class="stat-header">
-            <span>网络吞吐</span>
-            <a-tag size="small">实时</a-tag>
-          </div>
-          <div class="stat-value">{{ formatThroughput(summary.network.in) }}/s</div>
-          <div class="stat-sub-value">出：{{ formatThroughput(summary.network.out) }}/s</div>
-          <div class="stat-desc">运行时长：{{ formatDuration(summary.uptime) }}</div>
-        </a-card>
-      </a-col>
-    </a-row>
+    <div class="summary-row">
+      <div class="stat-card">
+        <div class="stat-header">
+          <span>CPU使用率</span>
+          <a-tag size="small">{{ summary.cpu.cores || '-' }} 核</a-tag>
+        </div>
+        <div class="stat-value">{{ summary.cpu.percent.toFixed(1) }}%</div>
+        <a-progress
+          :percent="summary.cpu.percent"
+          :status="getProgressStatus(summary.cpu.percent, [75, 90])"
+          stroke-width="6"
+        />
+        <div class="stat-desc">负载：{{ formatLoad(summary.cpu.loadavg) }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <span>内存使用率</span>
+          <a-tag size="small">{{ formatBytes(summary.memory.used) }}/{{ formatBytes(summary.memory.total) }}</a-tag>
+        </div>
+        <div class="stat-value">{{ summary.memory.percent.toFixed(1) }}%</div>
+        <a-progress
+          :percent="summary.memory.percent"
+          :status="getProgressStatus(summary.memory.percent, [80, 90])"
+          stroke-width="6"
+        />
+        <div class="stat-desc">NUMA：{{ summary.memory.total ? '已启用/默认' : '-' }}</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <span>存储使用率</span>
+          <a-tag size="small">{{ formatBytes(summary.storage.used) }}/{{ formatBytes(summary.storage.total) }}</a-tag>
+        </div>
+        <div class="stat-value">{{ summary.storage.percent.toFixed(1) }}%</div>
+        <a-progress
+          :percent="summary.storage.percent"
+          :status="getProgressStatus(summary.storage.percent, [80, 90])"
+          stroke-width="6"
+        />
+        <div class="stat-desc">根存储使用</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <span>网络吞吐</span>
+          <a-tag size="small">实时</a-tag>
+        </div>
+        <div class="stat-value">{{ formatThroughput(summary.network.in) }}/s</div>
+        <div class="stat-sub-value">出：{{ formatThroughput(summary.network.out) }}/s</div>
+        <div class="stat-desc">运行时长：{{ formatDuration(summary.uptime) }}</div>
+      </div>
+    </div>
 
     <a-card title="资源走势" class="chart-card" :bordered="false">
       <a-spin :loading="monitorLoading">
         <template #tip>正在加载节点监控数据...</template>
-        <div v-if="metrics.length" class="chart-grid">
-          <div class="chart-item">
-            <div class="chart-title">CPU使用率</div>
-            <div class="chart-box" ref="cpuChartRef"></div>
-          </div>
-          <div class="chart-item">
-            <div class="chart-title">内存使用率</div>
-            <div class="chart-box" ref="memoryChartRef"></div>
-          </div>
-          <div class="chart-item">
-            <div class="chart-title">存储使用率</div>
-            <div class="chart-box" ref="storageChartRef"></div>
-          </div>
-          <div class="chart-item">
-            <div class="chart-title">网络吞吐</div>
-            <div class="chart-box" ref="networkChartRef"></div>
-          </div>
-        </div>
+        <a-grid v-if="metrics.length" :cols="3" :col-gap="16" :row-gap="16" class="chart-grid">
+          <a-grid-item>
+            <a-card title="CPU使用率" :bordered="true" class="chart-item-card">
+              <div ref="cpuChartRef" class="chart-container"></div>
+            </a-card>
+          </a-grid-item>
+          <a-grid-item>
+            <a-card title="内存使用率" :bordered="true" class="chart-item-card">
+              <div ref="memoryChartRef" class="chart-container"></div>
+            </a-card>
+          </a-grid-item>
+          <a-grid-item>
+            <a-card title="存储使用率" :bordered="true" class="chart-item-card">
+              <div ref="storageChartRef" class="chart-container"></div>
+            </a-card>
+          </a-grid-item>
+          <a-grid-item>
+            <a-card title="网络吞吐" :bordered="true" class="chart-item-card">
+              <div ref="networkChartRef" class="chart-container"></div>
+            </a-card>
+          </a-grid-item>
+        </a-grid>
         <a-empty v-else description="暂无监控数据" />
       </a-spin>
     </a-card>
@@ -234,11 +230,36 @@ let networkChartInstance = null
 
 const formattedMetrics = computed(() => {
   if (!metrics.value?.length) return []
+  // 从 summary 获取内存和存储的总量，用于计算百分比
+  const memoryTotal = summary.memory.total || 0
+  const storageTotal = summary.storage.total || 0
+  
   return metrics.value.map(item => {
     const time = item.time
     const cpuPercent = typeof item.cpu === 'number' ? +(item.cpu * 100).toFixed(2) : 0
-    const memoryPercent = item.maxmem ? +(item.mem / item.maxmem * 100).toFixed(2) : 0
-    const storagePercent = item.maxdisk ? +(item.disk / item.maxdisk * 100).toFixed(2) : 0
+    
+    // 处理内存：优先使用 item.mem 和 item.maxmem，如果没有则使用 summary 的数据
+    let memoryPercent = 0
+    if (item.maxmem && item.mem !== undefined) {
+      memoryPercent = +(item.mem / item.maxmem * 100).toFixed(2)
+    } else if (memoryTotal > 0 && item.mem !== undefined) {
+      memoryPercent = +(item.mem / memoryTotal * 100).toFixed(2)
+    } else if (summary.memory.percent > 0) {
+      // 如果 metrics 中没有内存数据，使用 summary 的百分比
+      memoryPercent = summary.memory.percent
+    }
+    
+    // 处理存储：优先使用 item.disk 和 item.maxdisk，如果没有则使用 summary 的数据
+    let storagePercent = 0
+    if (item.maxdisk && item.disk !== undefined) {
+      storagePercent = +(item.disk / item.maxdisk * 100).toFixed(2)
+    } else if (storageTotal > 0 && item.disk !== undefined) {
+      storagePercent = +(item.disk / storageTotal * 100).toFixed(2)
+    } else if (summary.storage.percent > 0) {
+      // 如果 metrics 中没有存储数据，使用 summary 的百分比
+      storagePercent = summary.storage.percent
+    }
+    
     return {
       time,
       cpu: cpuPercent,
@@ -352,6 +373,17 @@ async function loadMonitor() {
     resetSummary(result.summary || {})
     metrics.value = Array.isArray(result.metrics) ? result.metrics : []
     alerts.value = Array.isArray(result.alerts) ? result.alerts : []
+    
+    // 如果 summary 中有内存数据但 metrics 中没有，尝试从 status 获取
+    if (result.status?.memory && (!summary.memory.total || summary.memory.total === 0)) {
+      const statusMem = result.status.memory
+      if (statusMem.total && statusMem.used !== undefined) {
+        summary.memory.total = statusMem.total
+        summary.memory.used = statusMem.used
+        summary.memory.percent = statusMem.total > 0 ? +((statusMem.used / statusMem.total) * 100).toFixed(2) : 0
+      }
+    }
+    
     await nextTick()
     updateCharts()
   } catch (error) {
@@ -395,6 +427,13 @@ function updateCharts() {
     color: ['#14C9C9', '#F53F3F'],
     yAxisFormatter: value => formatThroughput(value, true)
   })
+  // 确保图表正确调整大小
+  nextTick(() => {
+    cpuChartInstance?.resize()
+    memoryChartInstance?.resize()
+    storageChartInstance?.resize()
+    networkChartInstance?.resize()
+  })
 }
 
 function renderLineChart(refEl, chartInstance, data, config) {
@@ -405,7 +444,10 @@ function renderLineChart(refEl, chartInstance, data, config) {
     return null
   }
   if (!chartInstance) {
-    chartInstance = echarts.init(refEl.value)
+    chartInstance = echarts.init(refEl.value, null, {
+      width: 'auto',
+      height: 'auto'
+    })
   }
   const timeData = data.map(item => item.time)
   const series = []
@@ -442,9 +484,47 @@ function renderLineChart(refEl, chartInstance, data, config) {
       }
     })
   }
+  // 计算Y轴的最大值，用于统一单位显示
+  let maxValue = 0
+  if (Array.isArray(config.seriesKey)) {
+    config.seriesKey.forEach(key => {
+      const values = data.map(item => item[key] || 0)
+      maxValue = Math.max(maxValue, ...values)
+    })
+  } else {
+    const values = data.map(item => item[config.seriesKey] || 0)
+    maxValue = Math.max(maxValue, ...values)
+  }
+
+  // 网络吞吐需要统一单位
+  let yAxisFormatter = config.yAxisFormatter
+  const isNetworkChart = Array.isArray(config.seriesKey) && (config.seriesKey.includes('netIn') || config.seriesKey.includes('netOut'))
+  if (isNetworkChart) {
+    // 确定网络吞吐的统一单位
+    const baseUnit = maxValue >= 1024 * 1024 ? 'MB' : maxValue >= 1024 ? 'KB' : 'B'
+    yAxisFormatter = value => {
+      if (!value && value !== 0) return '0 B'
+      let num = Number(value)
+      if (baseUnit === 'MB') {
+        num = num / (1024 * 1024)
+        return `${num.toFixed(1)} MB`
+      } else if (baseUnit === 'KB') {
+        num = num / 1024
+        return `${num.toFixed(1)} KB`
+      }
+      return `${num.toFixed(0)} B`
+    }
+  }
+
   const option = {
     tooltip: {
       trigger: 'axis',
+      backgroundColor: 'rgba(50, 50, 50, 0.9)',
+      borderColor: 'transparent',
+      textStyle: {
+        color: '#fff',
+        fontSize: 12
+      },
       formatter: params => {
         if (!params?.length) return ''
         const time = formatTime(params[0].axisValue)
@@ -452,34 +532,64 @@ function renderLineChart(refEl, chartInstance, data, config) {
           const color = item.color
           const label = item.seriesName
           const value = config.yAxisFormatter ? config.yAxisFormatter(item.value) : item.value
-          return `<span style="display:inline-block;margin-right:4px;width:8px;height:8px;border-radius:50%;background:${color}"></span>${label}: ${value}`
+          return `<span style="display:inline-block;margin-right:6px;width:10px;height:10px;border-radius:50%;background:${color}"></span>${label}: ${value}`
         })
-        return `${time}<br/>${lines.join('<br/>')}`
+        return `<div style="padding: 4px 0;">${time}<br/>${lines.join('<br/>')}</div>`
       }
     },
     grid: {
-      left: 30,
-      right: 20,
-      top: 30,
-      bottom: 20
+      left: '5%',
+      right: '5%',
+      top: '10%',
+      bottom: '15%',
+      containLabel: true
     },
     xAxis: {
       type: 'category',
       boundaryGap: false,
       data: timeData,
       axisLabel: {
-        formatter: value => formatTime(value, true)
+        formatter: value => formatTime(value, true),
+        fontSize: 11,
+        color: '#86909c',
+        rotate: 0,
+        interval: 'auto'
+      },
+      axisLine: {
+        lineStyle: {
+          color: '#e5e6eb'
+        }
+      },
+      splitLine: {
+        show: false
       }
     },
     yAxis: {
       type: 'value',
       axisLabel: {
-        formatter: value => config.yAxisFormatter ? config.yAxisFormatter(value) : value
-      }
+        formatter: value => yAxisFormatter ? yAxisFormatter(value) : (config.yAxisFormatter ? config.yAxisFormatter(value) : value),
+        fontSize: 11,
+        color: '#86909c',
+        margin: 8
+      },
+      axisLine: {
+        lineStyle: {
+          color: '#e5e6eb'
+        }
+      },
+      splitLine: {
+        lineStyle: {
+          color: '#f2f3f5',
+          type: 'dashed'
+        }
+      },
+      scale: false
     },
     series
   }
   chartInstance.setOption(option)
+  // 确保图表正确计算尺寸
+  chartInstance.resize()
   return chartInstance
 }
 
@@ -603,45 +713,97 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .pve-node-monitor {
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  padding: 24px;
+  background: var(--color-bg-1);
+  min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: visible;
 }
 
 .filter-card {
-  padding-bottom: 8px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.filter-card :deep(.arco-card-body) {
+  padding: 24px;
 }
 
 .filter-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  align-items: flex-end;
+}
+
+.filter-item {
+  flex: 0 0 auto;
+  min-width: 200px;
 }
 
 .filter-item .label {
   font-size: 13px;
   color: var(--color-text-2);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  font-weight: 500;
 }
 
 .filter-item.actions {
-  justify-self: flex-end;
-  text-align: right;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .filter-item .meta {
   font-size: 12px;
   color: var(--color-text-2);
+  white-space: nowrap;
+}
+
+.filter-item .meta span:first-child {
+  color: var(--color-text-3);
 }
 
 .summary-row {
-  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  margin-bottom: 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.summary-row > .stat-card {
+  flex: 0 0 auto;
+  width: 100%;
 }
 
 .stat-card {
-  min-height: 180px;
+  background: var(--color-bg-2);
+  border-radius: 8px;
+  padding: 24px;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  transition: all 0.3s ease;
+  overflow: visible;
+  border: 1px solid var(--color-border-2);
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  border-color: var(--color-border-3);
 }
 
 .stat-header {
@@ -650,65 +812,206 @@ onBeforeUnmount(() => {
   align-items: center;
   font-size: 14px;
   color: var(--color-text-1);
+  font-weight: 500;
+  margin-bottom: 16px;
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 600;
-  margin: 12px 0 8px;
+  color: var(--color-text-1);
+  margin: 16px 0 12px;
+  line-height: 1.2;
 }
 
 .stat-sub-value {
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 500;
-  margin-bottom: 8px;
+  color: var(--color-text-2);
+  margin-bottom: 12px;
 }
 
 .stat-desc {
   font-size: 12px;
-  color: var(--color-text-2);
-  margin-top: 6px;
+  color: var(--color-text-3);
+  margin-top: 8px;
+}
+
+.stat-card :deep(.arco-progress) {
+  margin-top: 8px;
 }
 
 .chart-card {
-  min-height: 460px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.chart-card :deep(.arco-card-body) {
+  padding: 24px;
 }
 
 .chart-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 16px;
+  width: 100%;
 }
 
-.chart-item {
-  background: var(--color-bg-2);
-  border-radius: 8px;
-  padding: 12px;
+.chart-grid :deep(.arco-grid-item) {
+  min-width: 0;
+  width: 100%;
+}
+
+.chart-item-card {
+  height: 100%;
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
 }
 
-.chart-title {
-  font-size: 14px;
-  margin-bottom: 4px;
-  color: var(--color-text-1);
+.chart-item-card :deep(.arco-card) {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
-.chart-box {
+.chart-item-card :deep(.arco-card-body) {
   flex: 1;
-  min-height: 180px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.chart-container {
+  width: 100%;
+  height: 450px;
+  min-height: 450px;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.alert-card {
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 100%;
+
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.alert-card :deep(.arco-card-body) {
+  padding: 24px;
 }
 
 .alert-card .alert-item {
   margin-bottom: 12px;
 }
 
-@media (max-width: 768px) {
-  .filter-grid {
-    grid-template-columns: 1fr;
+.alert-card .alert-item:last-child {
+  margin-bottom: 0;
+}
+
+/* 响应式布局 */
+@media (max-width: 1600px) {
+  .chart-card :deep(.arco-grid) {
+    grid-template-columns: repeat(2, 1fr) !important;
   }
-  .stat-card {
+}
+
+@media (max-width: 1200px) {
+  .chart-card :deep(.arco-grid) {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 992px) {
+  .pve-node-monitor {
+    padding: 20px;
+  }
+
+  .filter-card,
+  .chart-card,
+  .alert-card {
+    margin-bottom: 20px;
+  }
+
+  .filter-card :deep(.arco-card-body),
+  .chart-card :deep(.arco-card-body),
+  .alert-card :deep(.arco-card-body),
+  .stat-card :deep(.arco-card-body) {
+    padding: 20px;
+  }
+
+  .filter-grid {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+  }
+
+  .filter-item {
+    min-width: 100%;
+  }
+
+  .filter-item.actions {
+    margin-left: 0;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .summary-row {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .summary-row > .stat-card {
+    width: 100%;
+  }
+
+  .chart-grid {
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  .pve-node-monitor {
+    padding: 16px;
+  }
+
+  .filter-card,
+  .chart-card,
+  .alert-card {
     margin-bottom: 16px;
+  }
+
+  .filter-card :deep(.arco-card-body),
+  .chart-card :deep(.arco-card-body),
+  .alert-card :deep(.arco-card-body),
+  .stat-card :deep(.arco-card-body) {
+    padding: 16px;
+  }
+
+  .filter-grid {
+    gap: 16px;
+  }
+
+  .summary-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .summary-row > .stat-card {
+    width: 100%;
+  }
+
+  .stat-value {
+    font-size: 28px;
   }
 }
 </style>
