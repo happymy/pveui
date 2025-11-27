@@ -69,3 +69,25 @@ class VirtualMachine(BaseAuditModel):
     
     def __str__(self) -> str:
         return f"{self.name} (VMID: {self.vmid})"
+
+
+class NetworkTopology(BaseAuditModel):
+    """网络拓扑模型：保存LogicFlow图数据及元信息。"""
+
+    name = models.CharField(max_length=150, verbose_name='拓扑名称')
+    description = models.TextField(blank=True, default='', verbose_name='描述')
+    is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    diagram_data = models.JSONField(default=dict, verbose_name='拓扑图数据')
+    metadata = models.JSONField(default=dict, blank=True, verbose_name='附加元信息')
+
+    class Meta:
+        verbose_name = '网络拓扑'
+        verbose_name_plural = '网络拓扑'
+        ordering = ['-updated_at']
+        indexes = [
+            models.Index(fields=['name']),
+            models.Index(fields=['is_active']),
+        ]
+
+    def __str__(self) -> str:
+        return self.name

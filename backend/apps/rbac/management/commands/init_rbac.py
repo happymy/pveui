@@ -79,7 +79,7 @@ class Command(BaseCommand):
         menu_operation_log = self._get_or_create_menu('操作日志', 'operation-log', 'system/operation-log/index', 'icon-file', menu_monitor_root, 2)
         menu_login_log = self._get_or_create_menu('登录日志', 'login-log', 'system/login-log/index', 'icon-user', menu_monitor_root, 3)
         menu_tasks = self._get_or_create_menu('任务管理', 'task', 'system/task/index', 'icon-schedule', menu_monitor_root, 4)
-
+        
         # PVE管理
         menu_pve_server = self._get_or_create_menu('PVE服务器管理', 'pve-server', 'pve/server/index', 'icon-computer', menu_pve, 1)
         menu_pve_vm = self._get_or_create_menu('虚拟机管理', 'pve-vm', 'pve/vm/index', 'icon-desktop', menu_pve, 2)
@@ -88,6 +88,7 @@ class Command(BaseCommand):
         menu_pve_tasks = self._get_or_create_menu('全局任务中心', 'pve-tasks', 'pve/tasks/index', 'icon-list', menu_pve, 5)
         menu_pve_templates = self._get_or_create_menu('模板管理', 'pve-templates', 'pve/templates/index', 'icon-file', menu_pve, 6)
         menu_pve_network = self._get_or_create_menu('网络管理', 'pve-network', 'pve/network/index', 'icon-link', menu_pve, 7)
+        menu_pve_topology = self._get_or_create_menu('网络拓扑', 'pve-topology', 'pve/topology/index', 'icon-cluster', menu_pve, 8)
 
         self.stdout.write(self.style.SUCCESS('  ✓ 创建菜单: 系统管理 / 系统监控 / PVE管理 分组完成'))
 
@@ -183,6 +184,12 @@ class Command(BaseCommand):
         perms.append(self._get_or_create_permission('PVE存储内容列表', 'pve_storage:storage_content', 'GET', r'/api/pve/servers/\\d+/nodes/[^/]+/storage/[^/]+/content/', menu_pve_storage))
         perms.append(self._get_or_create_permission('PVE存储上传', 'pve_storage:storage_upload', 'POST', r'/api/pve/servers/\\d+/nodes/[^/]+/storage/[^/]+/upload/', menu_pve_storage))
         perms.append(self._get_or_create_permission('PVE存储ISO列表', 'pve_storage:storage_iso', 'GET', r'/api/pve/servers/\\d+/nodes/[^/]+/storage/[^/]+/iso/', menu_pve_storage))
+        perms.append(self._get_or_create_permission('网络拓扑列表', 'pve_topology:list', 'GET', '/api/pve/network-topologies/', menu_pve_topology))
+        perms.append(self._get_or_create_permission('网络拓扑创建', 'pve_topology:create', 'POST', '/api/pve/network-topologies/', menu_pve_topology))
+        perms.append(self._get_or_create_permission('网络拓扑查看', 'pve_topology:retrieve', 'GET', r'/api/pve/network-topologies/\\d+/', menu_pve_topology))
+        perms.append(self._get_or_create_permission('网络拓扑更新', 'pve_topology:update', 'PUT', r'/api/pve/network-topologies/\\d+/', menu_pve_topology))
+        perms.append(self._get_or_create_permission('网络拓扑部分更新', 'pve_topology:partial_update', 'PATCH', r'/api/pve/network-topologies/\\d+/', menu_pve_topology))
+        perms.append(self._get_or_create_permission('网络拓扑删除', 'pve_topology:delete', 'DELETE', r'/api/pve/network-topologies/\\d+/', menu_pve_topology))
         
         # 虚拟机管理权限
         perms.append(self._get_or_create_permission('虚拟机列表', 'pve_vm:list', 'GET', '/api/pve/virtual-machines/', menu_pve_vm))
@@ -209,7 +216,7 @@ class Command(BaseCommand):
             # 系统监控
             menu_monitor, menu_operation_log, menu_login_log, menu_tasks,
             # PVE管理
-            menu_pve_server, menu_pve_vm, menu_pve_storage, menu_pve_node_monitor, menu_pve_tasks, menu_pve_templates, menu_pve_network,
+            menu_pve_server, menu_pve_vm, menu_pve_storage, menu_pve_node_monitor, menu_pve_tasks, menu_pve_templates, menu_pve_network, menu_pve_topology,
         ])
         role_admin.custom_data_organizations.set([org_root, org_admin])
         

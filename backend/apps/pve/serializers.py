@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 from apps.common.serializers import BaseModelSerializer
-from .models import PVEServer, VirtualMachine
+from .models import PVEServer, VirtualMachine, NetworkTopology
 
 
 class PVEServerListSerializer(BaseModelSerializer):
@@ -202,3 +202,58 @@ class VMCloneSerializer(serializers.Serializer):
     description = serializers.CharField(required=False, allow_blank=True, help_text='新虚拟机描述（可选）')
     pool = serializers.CharField(required=False, allow_blank=True, help_text='目标资源池（可选）')
     snapname = serializers.CharField(required=False, allow_blank=True, help_text='快照名称（可选，默认使用当前状态）')
+
+
+class NetworkTopologyListSerializer(BaseModelSerializer):
+    """网络拓扑列表序列化器。"""
+
+    class Meta:
+        model = NetworkTopology
+        fields = [
+            'id',
+            'name',
+            'description',
+            'is_active',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['created_at', 'updated_at']
+
+
+class NetworkTopologyDetailSerializer(BaseModelSerializer):
+    """网络拓扑详情序列化器。"""
+
+    class Meta:
+        model = NetworkTopology
+        fields = '__all__'
+        read_only_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
+
+
+class NetworkTopologySaveSerializer(BaseModelSerializer):
+    """网络拓扑创建/更新序列化器。"""
+
+    class Meta:
+        model = NetworkTopology
+        fields = [
+            'name',
+            'description',
+            'is_active',
+            'diagram_data',
+            'metadata',
+            'remark',
+        ]
+
+    def validate_diagram_data(self, value):
+        """确保拓扑图数据为字典。"""
+        if value is None:
+            return {}
+        if not isinstance(value, (dict, list)):
+            raise serializers.ValidationError('拓扑图数据必须为JSON对象或数组')
+        return value
+
+    def validate_metadata(self, value):
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError('附加元信息必须为JSON对象')
+        return value

@@ -375,3 +375,44 @@ export function getGlobalTaskLog(data) {
   })
 }
 
+/**
+ * 网络拓扑管理
+ */
+export function getNetworkTopologies(params) {
+  return request({
+    url: '/api/pve/network-topologies/',
+    method: 'get',
+    params
+  })
+}
+
+export function getNetworkTopology(id) {
+  return request({
+    url: `/api/pve/network-topologies/${id}/`,
+    method: 'get'
+  })
+}
+
+export function createNetworkTopology(data) {
+  return request({
+    url: '/api/pve/network-topologies/',
+    method: 'post',
+    data
+  })
+}
+
+export function updateNetworkTopology(id, data) {
+  return request({
+    url: `/api/pve/network-topologies/${id}/`,
+    method: 'patch',
+    data
+  })
+}
+
+export function deleteNetworkTopology(id) {
+  return request({
+    url: `/api/pve/network-topologies/${id}/`,
+    method: 'delete'
+  })
+}
+

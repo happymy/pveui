@@ -5,6 +5,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     PVEServerViewSet,
     VirtualMachineViewSet,
+    NetworkTopologyViewSet,
     console_iframe_view,
     console_asset_view,
 )
@@ -12,6 +13,7 @@ from .views import (
 router = DefaultRouter()
 router.register(r'servers', PVEServerViewSet, basename='pve-server')
 router.register(r'virtual-machines', VirtualMachineViewSet, basename='virtual-machine')
+router.register(r'network-topologies', NetworkTopologyViewSet, basename='network-topology')
 
 urlpatterns = [
     path('', include(router.urls)),

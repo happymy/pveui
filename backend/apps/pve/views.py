@@ -23,7 +23,7 @@ from django.contrib.auth.decorators import login_required
 from django.utils._os import safe_join
 from django.urls import reverse
 
-from .models import PVEServer, VirtualMachine
+from .models import PVEServer, VirtualMachine, NetworkTopology
 from .serializers import (
     PVEServerListSerializer,
     PVEServerDetailSerializer,
@@ -40,6 +40,9 @@ from .serializers import (
     VMSnapshotCreateSerializer,
     VMSnapshotActionSerializer,
     VMCloneSerializer,
+    NetworkTopologyListSerializer,
+    NetworkTopologyDetailSerializer,
+    NetworkTopologySaveSerializer,
 )
 from .pve_client import PVEAPIClient
 from .consumers import SESSION_CACHE_PREFIX
@@ -1524,6 +1527,36 @@ class VirtualMachineViewSet(AuditOwnerPopulateMixin, ActionSerializerMixin, view
             return Response({
                 'detail': f'同步状态失败: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class NetworkTopologyViewSet(AuditOwnerPopulateMixin, ActionSerializerMixin, viewsets.ModelViewSet):
+    """网络拓扑视图集：管理 LogicFlow 拓扑图。"""
+
+    serializer_class = NetworkTopologyDetailSerializer
+    list_serializer_class = NetworkTopologyListSerializer
+    retrieve_serializer_class = NetworkTopologyDetailSerializer
+    create_serializer_class = NetworkTopologySaveSerializer
+    update_serializer_class = NetworkTopologySaveSerializer
+    partial_update_serializer_class = NetworkTopologySaveSerializer
+
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ['is_active']
+    search_fields = ['name', 'description']
+    ordering_fields = ['id', 'name', 'updated_at']
+
+    def get_queryset(self):
+        return NetworkTopology.objects.filter(is_deleted=False).order_by('-updated_at')
+
+    def perform_create(self, serializer):
+        serializer.save(
+            created_by=self.request.user if self.request and self.request.user.is_authenticated else None,
+            updated_by=self.request.user if self.request and self.request.user.is_authenticated else None,
+        )
+
+    def perform_update(self, serializer):
+        serializer.save(
+            updated_by=self.request.user if self.request and self.request.user.is_authenticated else None
+        )
 
 
 @login_required
