@@ -226,6 +226,17 @@ export function syncVMStatus(id) {
 }
 
 /**
+ * 全量同步虚拟机
+ */
+export function syncAllVirtualMachines(data) {
+  return request({
+    url: '/api/pve/virtual-machines/sync_all/',
+    method: 'post',
+    data
+  })
+}
+
+/**
  * 更新虚拟机硬件配置
  */
 export function updateVirtualMachineHardware(id, data) {

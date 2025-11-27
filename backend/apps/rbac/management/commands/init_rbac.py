@@ -193,6 +193,7 @@ class Command(BaseCommand):
         perms.append(self._get_or_create_permission('虚拟机删除', 'pve_vm:delete', 'DELETE', r'/api/pve/virtual-machines/\\d+/', menu_pve_vm))
         perms.append(self._get_or_create_permission('虚拟机操作', 'pve_vm:vm_action', 'POST', r'/api/pve/virtual-machines/\\d+/vm_action/', menu_pve_vm))
         perms.append(self._get_or_create_permission('虚拟机同步状态', 'pve_vm:sync_status', 'GET', r'/api/pve/virtual-machines/\\d+/sync_status/', menu_pve_vm))
+        perms.append(self._get_or_create_permission('虚拟机全量同步', 'pve_vm:sync_all', 'POST', '/api/pve/virtual-machines/sync_all/', menu_pve_vm))
 
         self.stdout.write(self.style.SUCCESS(f'  ✓ 创建权限: {len(perms)} 个'))
 

@@ -37,6 +37,16 @@
             </template>
             创建虚拟机
           </a-button>
+          <a-button
+            type="outline"
+            :loading="syncing"
+            @click="handleSyncAll"
+          >
+            <template #icon>
+              <icon-refresh />
+            </template>
+            一键同步
+          </a-button>
         </a-space>
       </div>
 
@@ -434,7 +444,7 @@
 import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Message, Modal } from '@arco-design/web-vue'
-import { IconPlus, IconDown } from '@arco-design/web-vue/es/icon'
+import { IconPlus, IconDown, IconRefresh } from '@arco-design/web-vue/es/icon'
 import {
   getPVEServers,
   getPVEServerNodes,
@@ -445,7 +455,8 @@ import {
   createVirtualMachine,
   deleteVirtualMachine,
   vmAction,
-  syncVMStatus
+  syncVMStatus,
+  syncAllVirtualMachines
 } from '@/api/pve'
 
 const VM_DETAIL_ROUTE_NAME = 'PVEVirtualMachineDetail'
@@ -481,6 +492,7 @@ const storages = ref([])
 const isoList = ref([])
 const currentStep = ref(0)
 const submitting = ref(false)
+const syncing = ref(false)
 
 const pagination = reactive({
   current: 1,
@@ -930,6 +942,28 @@ const handleDelete = (record) => {
       }
     }
   })
+}
+
+const handleSyncAll = async () => {
+  if (!servers.value.length) {
+    Message.warning('请先添加至少一个 PVE 服务器')
+    return
+  }
+  if (syncing.value) return
+  syncing.value = true
+  try {
+    const payload = {}
+    if (selectedServer.value) {
+      payload.server_id = selectedServer.value
+    }
+    const res = await syncAllVirtualMachines(payload)
+    Message.success(`同步完成，新增 ${res?.created ?? 0} 台，更新 ${res?.updated ?? 0} 台`)
+    fetchData()
+  } catch (error) {
+    Message.error('同步失败：' + (error.message || '未知错误'))
+  } finally {
+    syncing.value = false
+  }
 }
 
 onMounted(() => {

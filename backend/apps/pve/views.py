@@ -1337,6 +1337,149 @@ class VirtualMachineViewSet(AuditOwnerPopulateMixin, ActionSerializerMixin, view
                 'detail': f'获取任务日志失败: {str(e)}'
             }, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['post'], url_path='sync_all')
+    def sync_all(self, request):
+        """同步PVE中现有的虚拟机到本地数据库，可按服务器筛选。"""
+        server_id = request.data.get('server_id')
+        
+        servers_qs = PVEServer.objects.filter(is_active=True)
+        if server_id:
+            servers_qs = servers_qs.filter(id=server_id)
+            if not servers_qs.exists():
+                return Response(
+                    {'detail': '指定的PVE服务器不存在或已禁用'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        summary = {
+            'server_count': servers_qs.count(),
+            'synced': 0,
+            'created': 0,
+            'updated': 0,
+            'errors': []
+        }
+        
+        def _extract_disk_gb(vm_config, vm_info):
+            candidates = ['scsi0', 'virtio0', 'sata0', 'ide0']
+            for field in candidates:
+                value = vm_config.get(field)
+                if isinstance(value, str) and 'size=' in value:
+                    size_part = value.split('size=', 1)[1].split(',', 1)[0].strip().upper()
+                    if size_part.endswith('G'):
+                        try:
+                            return int(size_part[:-1])
+                        except ValueError:
+                            continue
+                    if size_part.endswith('M'):
+                        try:
+                            return max(1, int(size_part[:-1]) // 1024)
+                        except ValueError:
+                            continue
+            maxdisk = vm_info.get('maxdisk')
+            if isinstance(maxdisk, (int, float)) and maxdisk > 0:
+                return max(1, int(maxdisk // (1024 * 1024 * 1024)))
+            return 10
+        
+        def _extract_ip(vm_config):
+            ipconfig = vm_config.get('ipconfig0')
+            if isinstance(ipconfig, str) and 'ip=' in ipconfig:
+                try:
+                    ip_part = ipconfig.split('ip=', 1)[1].split(',', 1)[0]
+                    return ip_part.split('/')[0]
+                except Exception:
+                    return ''
+            return ''
+        
+        for server in servers_qs:
+            try:
+                client = PVEAPIClient(
+                    host=server.host,
+                    port=server.port,
+                    token_id=server.token_id,
+                    token_secret=server.token_secret,
+                    verify_ssl=server.verify_ssl
+                )
+                nodes = client.get_nodes()
+                nodes = nodes if isinstance(nodes, list) else [nodes] if nodes else []
+            except Exception as exc:
+                summary['errors'].append(f'{server.name}: {exc}')
+                continue
+            
+            for node_info in nodes:
+                node_name = node_info.get('node') or node_info.get('name')
+                if not node_name:
+                    continue
+                try:
+                    vm_list = client.get_vms(node_name) or []
+                except Exception as exc:
+                    summary['errors'].append(f'{server.name}/{node_name}: {exc}')
+                    continue
+                
+                for vm_info in vm_list:
+                    vmid = vm_info.get('vmid') or vm_info.get('vmid')
+                    try:
+                        vmid = int(vmid)
+                    except (TypeError, ValueError):
+                        continue
+                    
+                    try:
+                        vm_config = client.get_vm_config(node_name, vmid)
+                    except Exception:
+                        vm_config = {}
+                    
+                    cpu_cores = (
+                        vm_config.get('cores')
+                        or vm_info.get('cores')
+                        or vm_info.get('cpus')
+                        or vm_info.get('maxcpu')
+                        or 1
+                    )
+                    try:
+                        cpu_cores = int(cpu_cores)
+                    except (TypeError, ValueError):
+                        cpu_cores = 1
+                    
+                    memory_mb = vm_config.get('memory')
+                    if not memory_mb:
+                        maxmem = vm_info.get('maxmem')
+                        if isinstance(maxmem, (int, float)):
+                            memory_mb = max(1, int(maxmem // (1024 * 1024)))
+                        else:
+                            memory_mb = 512
+                    
+                    disk_gb = _extract_disk_gb(vm_config, vm_info)
+                    ip_address = _extract_ip(vm_config)
+                    description = vm_config.get('description') or vm_config.get('notes', '')
+                    status_value = vm_info.get('status', 'unknown')
+                    if status_value not in dict(VirtualMachine.STATUS_CHOICES):
+                        status_value = 'unknown'
+                    
+                    defaults = {
+                        'name': vm_info.get('name') or f'vm-{vmid}',
+                        'node': node_name,
+                        'status': status_value,
+                        'cpu_cores': cpu_cores,
+                        'memory_mb': memory_mb,
+                        'disk_gb': disk_gb,
+                        'ip_address': ip_address,
+                        'description': description or '',
+                        'pve_config': vm_config or vm_info,
+                    }
+                    
+                    with transaction.atomic():
+                        vm_obj, created = VirtualMachine.objects.update_or_create(
+                            server=server,
+                            vmid=vmid,
+                            defaults=defaults
+                        )
+                        summary['synced'] += 1
+                        if created:
+                            summary['created'] += 1
+                        else:
+                            summary['updated'] += 1
+        
+        return Response(summary)
+    
     @action(detail=True, methods=['get'])
     def sync_status(self, request, pk=None):
         """同步虚拟机状态。"""
