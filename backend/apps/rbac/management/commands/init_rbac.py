@@ -88,7 +88,7 @@ class Command(BaseCommand):
         menu_pve_tasks = self._get_or_create_menu('全局任务中心', 'pve-tasks', 'pve/tasks/index', 'icon-list', menu_pve, 5)
         menu_pve_templates = self._get_or_create_menu('模板管理', 'pve-templates', 'pve/templates/index', 'icon-file', menu_pve, 6)
         menu_pve_network = self._get_or_create_menu('网络管理', 'pve-network', 'pve/network/index', 'icon-link', menu_pve, 7)
-        menu_pve_topology = self._get_or_create_menu('网络拓扑', 'pve-topology', 'pve/topology/index', 'icon-cluster', menu_pve, 8)
+        menu_pve_topology = self._get_or_create_menu('网络拓扑', 'pve-topology', 'pve/topology/index', 'icon-share-alt', menu_pve, 8)
 
         self.stdout.write(self.style.SUCCESS('  ✓ 创建菜单: 系统管理 / 系统监控 / PVE管理 分组完成'))
 

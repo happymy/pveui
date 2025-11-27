@@ -46,7 +46,12 @@
           </a-spin>
         </a-card>
 
-        <a-card v-if="currentTopology" class="topology-info-card" title="拓扑信息" :loading="saving">
+        <a-card
+          v-if="currentTopology"
+          class="topology-info-card"
+          title="拓扑信息"
+          :loading="saving || detailLoading"
+        >
           <a-form :model="topologyForm" layout="vertical">
             <a-form-item field="name" label="名称" required>
               <a-input v-model="topologyForm.name" placeholder="输入拓扑名称" />
@@ -182,6 +187,7 @@ import '@logicflow/core/es/index.css'
 import '@logicflow/extension/es/index.css'
 import {
   getNetworkTopologies,
+  getNetworkTopology,
   createNetworkTopology,
   updateNetworkTopology,
   deleteNetworkTopology
@@ -196,6 +202,7 @@ const saving = ref(false)
 const createModalVisible = ref(false)
 const createSubmitting = ref(false)
 const graphStats = reactive({ nodes: 0, edges: 0 })
+const detailLoading = ref(false)
 const nodeDrawerVisible = ref(false)
 const nodeForm = reactive({
   id: '',
@@ -286,44 +293,58 @@ const initLogicFlow = () => {
   })
 }
 
+const applyTopologyDetail = (detail) => {
+  if (!detail) return
+  currentTopology.value = detail
+  Object.assign(topologyForm, {
+    name: detail.name || '',
+    description: detail.description || '',
+    is_active: detail.is_active ?? true
+  })
+  renderGraph(detail.diagram_data || defaultGraphData)
+}
+
+const handleSelectTopology = async (item) => {
+  if (!item?.id) return
+  detailLoading.value = true
+  try {
+    const detail = await getNetworkTopology(item.id)
+    applyTopologyDetail(detail)
+  } catch (error) {
+    Message.error('加载拓扑详情失败：' + (error.message || '未知错误'))
+  } finally {
+    detailLoading.value = false
+  }
+}
+
 const loadTopologyList = async () => {
   listLoading.value = true
   try {
     const res = await getNetworkTopologies({ page_size: 100 })
     const list = Array.isArray(res) ? res : res?.results || []
     topologyList.value = list
-    if (!currentTopology.value && list.length) {
-      handleSelectTopology(list[0])
-    } else if (currentTopology.value) {
-      const refreshed = list.find(item => item.id === currentTopology.value.id)
-      if (refreshed) {
-        currentTopology.value = refreshed
-        renderGraph(refreshed.diagram_data || defaultGraphData)
-        Object.assign(topologyForm, {
-          name: refreshed.name,
-          description: refreshed.description || '',
-          is_active: refreshed.is_active
-        })
-      } else {
-        currentTopology.value = null
-        handleResetCanvas()
-      }
+    if (!list.length) {
+      currentTopology.value = null
+      handleResetCanvas()
+      return
+    }
+    if (!currentTopology.value) {
+      await handleSelectTopology(list[0])
+      return
+    }
+    const refreshed = list.find(item => item.id === currentTopology.value.id)
+    if (refreshed) {
+      await handleSelectTopology(refreshed)
+    } else {
+      currentTopology.value = null
+      handleResetCanvas()
+      await handleSelectTopology(list[0])
     }
   } catch (error) {
     Message.error('获取拓扑列表失败：' + (error.message || '未知错误'))
   } finally {
     listLoading.value = false
   }
-}
-
-const handleSelectTopology = (item) => {
-  currentTopology.value = item
-  Object.assign(topologyForm, {
-    name: item.name,
-    description: item.description || '',
-    is_active: item.is_active
-  })
-  renderGraph(item.diagram_data || defaultGraphData)
 }
 
 const renderGraph = (data) => {
