@@ -51,6 +51,22 @@ export const constantRoutes = [
       }
     ]
   },
+  {
+    path: '/pve/topology/edit',
+    component: Layout,
+    hidden: true,
+    children: [
+      {
+        path: ':id?',
+        name: 'PVETopologyEdit',
+        component: () => import('@/views/pve/topology/edit.vue'),
+        meta: {
+          title: '拓扑编辑',
+          activeMenu: '/pve/topology'
+        }
+      }
+    ]
+  },
 ]
 
 // 动态路由（从后端菜单生成）
