@@ -4,8 +4,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
-    "preview": "vite preview",
-    "build:widget": "vite build --config vite.widget.config.ts"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@novnc/novnc": "^1.4.0",

@@ -12,20 +12,12 @@ class Command(BaseCommand):
     help = '初始化聊天模块菜单和权限'
 
     def handle(self, *args, **options):
-        # 获取或创建聊天菜单（放在系统工具下）
+        # 获取或创建系统管理菜单（作为聊天菜单的父菜单）
         try:
-            tools_menu = Menu.objects.get(path='tools')
+            system_menu = Menu.objects.get(path='system')
         except Menu.DoesNotExist:
-            self.stdout.write(self.style.WARNING('系统工具菜单不存在，正在创建...'))
-            tools_menu = Menu.objects.create(
-                title='系统工具',
-                path='tools',
-                component='',
-                icon='icon-tool',
-                parent=None,
-                order=3,
-                is_hidden=False
-            )
+            self.stdout.write(self.style.ERROR('  ✗ 未找到系统管理菜单，请先运行 python manage.py init_rbac'))
+            return
 
         # 创建聊天菜单
         chat_menu, created = Menu.objects.get_or_create(
@@ -34,8 +26,8 @@ class Command(BaseCommand):
                 'title': '员工聊天',
                 'component': 'chat/index',
                 'icon': 'icon-message',
-                'parent': tools_menu,
-                'order': 10,
+                'parent': system_menu,
+                'order': 9,
                 'is_hidden': False,
             }
         )

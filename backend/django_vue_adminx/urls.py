@@ -37,9 +37,6 @@ urlpatterns = [
     path('api/shop/', include('apps.shop.urls')),
     path('api/chat/', include('apps.chat.urls')),
     path('api/system/', include('apps.system.urls')),
-    path('api/office/', include('apps.office.urls')),
-    path('api/knowledge/', include('apps.knowledge.urls')),
-    path('api/customer-service/', include('apps.customer_service.urls')),
     path('api/pve/', include('apps.pve.urls')),
 ]
 

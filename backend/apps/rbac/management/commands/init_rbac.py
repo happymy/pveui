@@ -63,12 +63,7 @@ class Command(BaseCommand):
         menu_dashboard = self._get_or_create_menu('仪表盘', 'dashboard', 'dashboard/index', 'icon-dashboard', None, 0)
         menu_system = self._get_or_create_menu('系统管理', 'system', '', 'icon-settings', None, 1)
         menu_monitor_root = self._get_or_create_menu('系统监控', 'monitor', '', 'icon-dashboard', None, 2)
-        menu_tools = self._get_or_create_menu('系统工具', 'tools', '', 'icon-tool', None, 3)
-        menu_office = self._get_or_create_menu('系统办公', 'office', '', 'icon-file', None, 4)
-        menu_support = self._get_or_create_menu('客服中心', 'support', '', 'icon-customer-service', None, 5)
-        menu_knowledge_root = self._get_or_create_menu('知识库', 'knowledge', '', 'icon-book', None, 6)
-        menu_pve = self._get_or_create_menu('PVE管理', 'pve', '', 'icon-apps', None, 7)
-        menu_tools_sheet = self._get_or_create_menu('在线表格', 'spreadsheet', 'tools/spreadsheet/index', 'icon-apps', menu_tools, 3)
+        menu_pve = self._get_or_create_menu('PVE管理', 'pve', '', 'icon-apps', None, 3)
 
         # 系统管理
         menu_user = self._get_or_create_menu('用户管理', 'user', 'system/user/index', 'icon-user', menu_system, 1)
@@ -85,16 +80,9 @@ class Command(BaseCommand):
         menu_login_log = self._get_or_create_menu('登录日志', 'login-log', 'system/login-log/index', 'icon-user', menu_monitor_root, 3)
         menu_tasks = self._get_or_create_menu('任务管理', 'task', 'system/task/index', 'icon-schedule', menu_monitor_root, 4)
 
-        # 系统工具
-        menu_codegen = self._get_or_create_menu('代码生成器', 'codegen', 'system/codegen/index', 'icon-code', menu_tools, 1)
-        menu_example = self._get_or_create_menu('示例管理', 'example', 'curdexample/index', 'icon-apps', menu_tools, 2)
-
-        # 系统办公
-        menu_document = self._get_or_create_menu('在线文档', 'document', 'office/document/index', 'icon-file', menu_office, 1)
-        # 客服中心
-        menu_support_workbench = self._get_or_create_menu('客服工作台', 'support-workbench', 'support/workbench/index', 'icon-service', menu_support, 1)
-        # 知识库
-        menu_knowledge_article = self._get_or_create_menu('知识文章', 'knowledge-article', 'knowledge/article/index', 'icon-book', menu_knowledge_root, 1)
+        # 系统工具（代码生成器保留在系统管理下）
+        menu_codegen = self._get_or_create_menu('代码生成器', 'codegen', 'system/codegen/index', 'icon-code', menu_system, 7)
+        menu_example = self._get_or_create_menu('示例管理', 'example', 'curdexample/index', 'icon-apps', menu_system, 8)
         
         # PVE管理
         menu_pve_server = self._get_or_create_menu('PVE服务器管理', 'pve-server', 'pve/server/index', 'icon-computer', menu_pve, 1)
@@ -105,7 +93,7 @@ class Command(BaseCommand):
         menu_pve_templates = self._get_or_create_menu('模板管理', 'pve-templates', 'pve/templates/index', 'icon-file', menu_pve, 6)
         menu_pve_network = self._get_or_create_menu('网络管理', 'pve-network', 'pve/network/index', 'icon-link', menu_pve, 7)
 
-        self.stdout.write(self.style.SUCCESS('  ✓ 创建菜单: 系统管理 / 系统监控 / 系统工具 / PVE管理 分组完成'))
+        self.stdout.write(self.style.SUCCESS('  ✓ 创建菜单: 系统管理 / 系统监控 / PVE管理 分组完成'))
 
         # 3. 创建权限
         self.stdout.write('创建权限...')
@@ -158,14 +146,6 @@ class Command(BaseCommand):
         # 登录日志权限（归属监控）
         perms.append(self._get_or_create_permission('登录日志列表', 'login_log:list', 'GET', '/api/audit/login-logs/', menu_login_log))
         perms.append(self._get_or_create_permission('登录日志查看', 'login_log:view', 'GET', r'/api/audit/login-logs/\\d+/', menu_login_log))
-        # 代码生成（归属系统工具）
-        perms.append(self._get_or_create_permission('代码生成', 'codegen:generate', 'POST', '/api/codegen/generate/', menu_codegen))
-        # 示例管理权限（curdexample，归属工具）
-        perms.append(self._get_or_create_permission('示例列表', 'example:list', 'GET', '/api/curd/example/', menu_example))
-        perms.append(self._get_or_create_permission('示例创建', 'example:create', 'POST', '/api/curd/example/', menu_example))
-        perms.append(self._get_or_create_permission('示例更新', 'example:update', 'PUT', r'/api/curd/example/\\d+/', menu_example))
-        perms.append(self._get_or_create_permission('示例删除', 'example:delete', 'DELETE', r'/api/curd/example/\\d+/', menu_example))
-
         # 系统设置权限（归属系统管理）
         perms.append(self._get_or_create_permission('系统设置列表', 'system_setting:list', 'GET', '/api/system/settings/', menu_system_setting))
         perms.append(self._get_or_create_permission('系统设置创建', 'system_setting:create', 'POST', '/api/system/settings/', menu_system_setting))
@@ -175,30 +155,13 @@ class Command(BaseCommand):
         perms.append(self._get_or_create_permission('系统设置批量更新', 'system_setting:bulk_update', 'POST', '/api/system/settings/bulk_update/', menu_system_setting))
         perms.append(self._get_or_create_permission('系统设置按键获取', 'system_setting:get_by_key', 'GET', '/api/system/settings/get_by_key/', menu_system_setting))
 
-        # 在线文档权限（归属系统办公）
-        perms.append(self._get_or_create_permission('文档列表', 'document:list', 'GET', '/api/office/documents/', menu_document))
-        perms.append(self._get_or_create_permission('文档创建', 'document:create', 'POST', '/api/office/documents/', menu_document))
-        perms.append(self._get_or_create_permission('文档更新', 'document:update', 'PUT', r'/api/office/documents/\\d+/', menu_document))
-        perms.append(self._get_or_create_permission('文档部分更新', 'document:partial_update', 'PATCH', r'/api/office/documents/\\d+/', menu_document))
-        perms.append(self._get_or_create_permission('文档删除', 'document:delete', 'DELETE', r'/api/office/documents/\\d+/', menu_document))
-        perms.append(self._get_or_create_permission('文档置顶', 'document:toggle_pin', 'POST', r'/api/office/documents/\\d+/toggle_pin/', menu_document))
-        # 客服中心权限
-        perms.append(self._get_or_create_permission('客服会话列表', 'cs_session:list', 'GET', '/api/customer-service/sessions/', menu_support_workbench))
-        perms.append(self._get_or_create_permission('客服会话分配', 'cs_session:assign', 'POST', r'/api/customer-service/sessions/\\d+/assign/', menu_support_workbench))
-        perms.append(self._get_or_create_permission('客服会话关闭', 'cs_session:close', 'POST', r'/api/customer-service/sessions/\\d+/close/', menu_support_workbench))
-        perms.append(self._get_or_create_permission('客服发送消息', 'cs_session:send_message', 'POST', r'/api/customer-service/sessions/\\d+/send_message/', menu_support_workbench))
-        perms.append(self._get_or_create_permission('客服消息列表', 'cs_message:list', 'GET', '/api/customer-service/messages/', menu_support_workbench))
-        perms.append(self._get_or_create_permission('访客会话初始化', 'cs_guest:session_init', 'POST', '/api/customer-service/guest/session/', menu_support_workbench))
-        perms.append(self._get_or_create_permission('访客消息发送', 'cs_guest:message_send', 'POST', '/api/customer-service/guest/messages/', menu_support_workbench))
-        perms.append(self._get_or_create_permission('访客历史消息', 'cs_guest:message_history', 'GET', '/api/customer-service/guest/messages/history/', menu_support_workbench))
-
-        # 知识库权限
-        perms.append(self._get_or_create_permission('知识库列表', 'knowledge:list', 'GET', '/api/knowledge/articles/', menu_knowledge_article))
-        perms.append(self._get_or_create_permission('知识库创建', 'knowledge:create', 'POST', '/api/knowledge/articles/', menu_knowledge_article))
-        perms.append(self._get_or_create_permission('知识库更新', 'knowledge:update', 'PUT', r'/api/knowledge/articles/\\d+/', menu_knowledge_article))
-        perms.append(self._get_or_create_permission('知识库部分更新', 'knowledge:partial_update', 'PATCH', r'/api/knowledge/articles/\\d+/', menu_knowledge_article))
-        perms.append(self._get_or_create_permission('知识库删除', 'knowledge:delete', 'DELETE', r'/api/knowledge/articles/\\d+/', menu_knowledge_article))
-        perms.append(self._get_or_create_permission('知识库分类查询', 'knowledge:categories', 'GET', '/api/knowledge/articles/categories/', menu_knowledge_article))
+        # 代码生成（归属系统管理）
+        perms.append(self._get_or_create_permission('代码生成', 'codegen:generate', 'POST', '/api/codegen/generate/', menu_codegen))
+        # 示例管理权限（curdexample，归属系统管理）
+        perms.append(self._get_or_create_permission('示例列表', 'example:list', 'GET', '/api/curd/example/', menu_example))
+        perms.append(self._get_or_create_permission('示例创建', 'example:create', 'POST', '/api/curd/example/', menu_example))
+        perms.append(self._get_or_create_permission('示例更新', 'example:update', 'PUT', r'/api/curd/example/\\d+/', menu_example))
+        perms.append(self._get_or_create_permission('示例删除', 'example:delete', 'DELETE', r'/api/curd/example/\\d+/', menu_example))
 
         # PVE服务器管理权限
         perms.append(self._get_or_create_permission('PVE服务器列表', 'pve_server:list', 'GET', '/api/pve/servers/', menu_pve_server))
@@ -250,19 +213,11 @@ class Command(BaseCommand):
         role_admin.permissions.set(perms)
         role_admin.menus.set([
             # 顶级
-            menu_dashboard, menu_system, menu_monitor_root, menu_tools, menu_office, menu_knowledge_root, menu_pve,
+            menu_dashboard, menu_system, menu_monitor_root, menu_pve,
             # 系统管理
-            menu_user, menu_role, menu_menu, menu_permission, menu_org, menu_system_setting,
+            menu_user, menu_role, menu_menu, menu_permission, menu_org, menu_system_setting, menu_codegen, menu_example,
             # 系统监控
             menu_monitor, menu_operation_log, menu_login_log, menu_tasks,
-            # 系统工具
-            menu_codegen, menu_example, menu_tools_sheet,
-            # 系统办公
-            menu_document,
-            # 客服中心
-            menu_support_workbench,
-            # 知识库
-            menu_knowledge_article,
             # PVE管理
             menu_pve_server, menu_pve_vm, menu_pve_storage, menu_pve_node_monitor, menu_pve_tasks, menu_pve_templates, menu_pve_network,
         ])

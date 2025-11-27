@@ -57,9 +57,6 @@ INSTALLED_APPS = [
     'apps.shop.apps.ShopConfig',
     'apps.chat.apps.ChatConfig',
     'apps.system.apps.SystemConfig',
-    'apps.office.apps.OfficeConfig',
-    'apps.knowledge.apps.KnowledgeConfig',
-    'apps.customer_service.apps.CustomerServiceConfig',
     'apps.pve.apps.PveConfig',
 ]
 
