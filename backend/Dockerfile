@@ -11,9 +11,6 @@ COPY ./ /app/
 RUN pip install --upgrade pip -i https://mirrors.aliyun.com/pypi/simple/ && \
     pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 
-# 复制项目代码（从 backend 目录）
-COPY backend/ /app/
-
 # 收集静态文件（如果需要）
 RUN python manage.py makemigrations && python manage.py migrate && python manage.py init_rbac --create-superuser && python manage.py init_rbac
 
