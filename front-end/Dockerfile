@@ -10,10 +10,7 @@ WORKDIR /app
 COPY front-end/ ./
 
 RUN npm config set registry https://registry.npmmirror.com
-
-# 构建生产版本
 RUN npm install
-
 # 构建生产版本
 RUN npm run build
 
@@ -31,4 +28,3 @@ EXPOSE 80
 
 # 启动 Nginx
 CMD ["nginx", "-g", "daemon off;"]
-
