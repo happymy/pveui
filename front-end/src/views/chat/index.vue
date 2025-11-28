@@ -376,7 +376,13 @@ const connectWebSocket = () => {
   let host = import.meta.env.VITE_HOST || 'http://127.0.0.1:8000'
   // 移除协议前缀
   host = host.replace(/^https?:\/\//, '')
-  const wsPath = `${protocol}//${host}/ws/chat/`
+  
+  // 添加 JWT token 到 WebSocket URL（用于认证）
+  const jwtToken = localStorage.getItem('access_token')
+  let wsPath = `${protocol}//${host}/ws/chat/`
+  if (jwtToken) {
+    wsPath = `${wsPath}?jwt_token=${encodeURIComponent(jwtToken)}`
+  }
   
   console.log('连接WebSocket:', wsPath)
   

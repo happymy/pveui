@@ -25,15 +25,15 @@ except Exception:
 
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
-from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
 
 # 初始化Django应用
 django_asgi_app = get_asgi_application()
 
-# 导入WebSocket路由
+# 导入WebSocket路由和JWT认证中间件
 from apps.chat.routing import websocket_urlpatterns as chat_websocket_urlpatterns
 from apps.pve.routing import websocket_urlpatterns as pve_websocket_urlpatterns
+from apps.common.middleware import JWTAuthMiddleware
 
 websocket_urlpatterns = (
     chat_websocket_urlpatterns + pve_websocket_urlpatterns
@@ -43,9 +43,9 @@ application = ProtocolTypeRouter({
     # HTTP请求使用Django ASGI应用
     "http": django_asgi_app,
     
-    # WebSocket请求使用自定义路由
+    # WebSocket请求使用JWT认证中间件
     "websocket": AllowedHostsOriginValidator(
-        AuthMiddlewareStack(
+        JWTAuthMiddleware(
             URLRouter(websocket_urlpatterns)
         )
     ),

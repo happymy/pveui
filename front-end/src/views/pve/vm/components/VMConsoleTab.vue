@@ -101,6 +101,13 @@ const initConsole = async () => {
       throw new Error('未获取到 WebSocket 代理路径')
     }
 
+    // 添加 JWT token 到 WebSocket URL（用于认证）
+    const jwtToken = localStorage.getItem('access_token')
+    if (jwtToken) {
+      const separator = wsUrl.includes('?') ? '&' : '?'
+      wsUrl = `${wsUrl}${separator}jwt_token=${encodeURIComponent(jwtToken)}`
+    }
+
     const password = session.password || ''
 
     // 等待 DOM 更新
