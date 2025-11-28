@@ -17,7 +17,7 @@ services:
     image: registry.cn-beijing.aliyuncs.com/yuanbuluo/pveui:front-end
     container_name: django-vue-adminx-frontend
     ports:
-      - "80:80"
+      - "8012:80"
     depends_on:
       - backend
     restart: unless-stopped
