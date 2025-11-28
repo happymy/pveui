@@ -10,6 +10,7 @@ from django.contrib.auth import authenticate, login, logout, get_user_model
 from rest_framework import viewsets, permissions, filters, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework_simplejwt.tokens import RefreshToken
 from django_filters.rest_framework import DjangoFilterBackend
 from apps.common.pagination import LargePageSizePagination
 from .models import Menu, Permission, Role, UserRole, Organization, UserOrganization
@@ -331,7 +332,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class LoginView(APIView):
-    """登录接口：Django Session 认证。"""
+    """登录接口：JWT 认证。"""
 
     permission_classes = [permissions.AllowAny]
 
@@ -394,7 +395,10 @@ class LoginView(APIView):
                 pass
             return Response({"detail": "用户未启用"}, status=status.HTTP_403_FORBIDDEN)
 
-        login(request, user)
+        # 生成JWT token
+        refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
 
         # 记录登录成功日志
         try:
@@ -420,19 +424,31 @@ class LoginView(APIView):
             "username": getattr(user, 'username', ''),
             "roles": list(role_qs.values_list('code', flat=True)),
             "permissions": list(perm_qs.values_list('code', flat=True)),
+            "access": access_token,
+            "refresh": refresh_token,
         }
         return Response(data)
 
 
 class LogoutView(APIView):
-    """退出登录接口：清除 Session。"""
+    """退出登录接口：JWT 认证（将 refresh token 加入黑名单）。"""
 
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):  # noqa: D401
         user = request.user if (hasattr(request, 'user') and request.user.is_authenticated) else None
         username = getattr(user, 'username', '') if user else ''
-        logout(request)
+        
+        # JWT 认证：将 refresh token 加入黑名单
+        try:
+            refresh_token = request.data.get('refresh')
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+        except Exception:
+            # 如果黑名单功能未启用或token无效，忽略错误
+            pass
+        
         # 记录登出日志
         try:
             OperationLog.objects.create(

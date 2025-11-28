@@ -1,41 +1,25 @@
 import axios from 'axios'
 import { Message } from '@arco-design/web-vue'
 
-// 支持 Cookie（Session 认证需要）
+// JWT 认证
 const service = axios.create({
-  // baseURL: import.meta.env.VITE_HOST || 'http://127.0.0.1:8000',
-  baseURL: "/api",
-  withCredentials: true, // 支持跨域 Cookie
+  baseURL: import.meta.env.VITE_HOST || 'http://127.0.0.1:8000',
+  // baseURL: "/api",
   timeout: 10000,
 })
 
-// 获取 CSRF token（从 Cookie 中读取）
-function getCsrfToken() {
-  const name = 'csrftoken'
-  const cookies = document.cookie.split(';')
-  for (let cookie of cookies) {
-    const [key, value] = cookie.trim().split('=')
-    if (key === name) {
-      return decodeURIComponent(value)
-    }
-  }
-  return null
+// 获取 JWT token（从 localStorage 中读取）
+function getAccessToken() {
+  return localStorage.getItem('access_token') || null
 }
 
 // 请求拦截器
 service.interceptors.request.use(
   config => {
-    // 对于需要 CSRF token 的请求（POST, PUT, DELETE, PATCH），添加 CSRF token
-    const method = config.method?.toUpperCase()
-    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-      const csrfToken = getCsrfToken()
-
-      // 在请求头中添加 CSRF token
-      if (csrfToken) {
-        config.headers['X-CSRFToken'] = csrfToken
-      } else {
-        console.warn('CSRF token 未找到，请确保已登录')
-      }
+    // 添加 JWT token 到请求头
+    const token = getAccessToken()
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`
     }
 
     return config
@@ -59,7 +43,20 @@ service.interceptors.response.use(
     return res
   },
   error => {
-    // 处理错误响应
+    // 处理401未授权错误（token过期或无效）
+    if (error.response?.status === 401) {
+      // 清除token并跳转到登录页
+      localStorage.removeItem('access_token')
+      localStorage.removeItem('refresh_token')
+      // 避免在登录页重复跳转
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
+      Message.error('登录已过期，请重新登录')
+      return Promise.reject(error)
+    }
+
+    // 处理其他错误响应
     const errorMessage = error.response?.data?.detail ||
                          error.response?.data?.message ||
                          error.message ||

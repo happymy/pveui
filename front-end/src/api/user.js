@@ -15,12 +15,14 @@ export function login(data) {
 
 /**
  * 退出登录接口
+ * @param {Object} data - 退出登录数据 { refresh }
  * @returns {Promise}
  */
-export function logout() {
+export function logout(data) {
   return request({ 
     url: '/api/rbac/auth/logout/', 
-    method: 'post' 
+    method: 'post',
+    data
   })
 }
 

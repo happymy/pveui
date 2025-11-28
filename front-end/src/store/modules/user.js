@@ -25,7 +25,14 @@ const actions = {
       console.log('[store.user] login payload:', loginForm)
       const res = await login(loginForm)
       console.log('[store.user] login response:', res)
-      // 后端返回：{ id, username, roles, permissions }
+      // 后端返回：{ id, username, roles, permissions, access, refresh }
+      // 保存 JWT token
+      if (res.access) {
+        localStorage.setItem('access_token', res.access)
+      }
+      if (res.refresh) {
+        localStorage.setItem('refresh_token', res.refresh)
+      }
       commit('SET_USER_INFO', {
         id: res.id,
         username: res.username,
@@ -69,11 +76,18 @@ const actions = {
    */
   async logout({ commit }) {
     try {
-      await logout()
+      // 发送refresh token到后端加入黑名单
+      const refreshToken = localStorage.getItem('refresh_token')
+      if (refreshToken) {
+        await logout({ refresh: refreshToken })
+      }
     } catch (ignore) {
       // 即使退出失败也清除本地状态
     }
 
+    // 清除本地token和用户信息
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
     commit('RESET_STATE')
   }
 }

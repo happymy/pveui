@@ -176,7 +176,10 @@ CORS_ALLOW_CREDENTIALS = True  # 允许携带 Cookie（Session 认证需要）
 #     'http://localhost:5173',
 #     'http://127.0.0.1:5173',
 # ]
-CSRF_TRUSTED_ORIGINS = ['*']
+CSRF_TRUSTED_ORIGINS = [
+    'http://*',
+    'https://*',
+]
 # CSRF Cookie 设置（跨域时需要）
 CSRF_COOKIE_SAMESITE = 'Lax'  # 开发环境使用 Lax（生产环境跨域时使用 None）
 CSRF_COOKIE_SECURE = False  # 开发环境使用 False（生产环境应使用 True）
@@ -212,6 +215,7 @@ REST_FRAMEWORK = {
         'apps.rbac.permissions.RBACPermission',
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework.authentication.BasicAuthentication',
     ],
@@ -243,3 +247,19 @@ if REDIS_URL:
             },
         },
     }
+
+# JWT 配置
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=24),  # Access token 有效期24小时
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),   # Refresh token 有效期7天
+    'ROTATE_REFRESH_TOKENS': True,                 # 刷新时轮换refresh token
+    'BLACKLIST_AFTER_ROTATION': True,              # 轮换后将旧token加入黑名单
+    'UPDATE_LAST_LOGIN': True,                     # 更新最后登录时间
+    'ALGORITHM': 'HS256',                          # 加密算法
+    'SIGNING_KEY': SECRET_KEY,                     # 签名密钥
+    'AUTH_HEADER_TYPES': ('Bearer',),              # 认证头类型
+    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',      # 认证头名称
+    'USER_ID_FIELD': 'id',                         # 用户ID字段
+    'USER_ID_CLAIM': 'user_id',                    # JWT中的用户ID声明
+}
