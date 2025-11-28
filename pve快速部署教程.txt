@@ -24,7 +24,8 @@ apt install -y docker-ce docker-ce-cli containerd.io
 systemctl enable docker
 systemctl start docker
 
-新建一个docker-compose.yaml
+新建一个docker-compose.yaml 然后把项目代码这的docker-compose.yaml 的内容粘贴过去
+或者直接scp docker-compose.yaml 到pve 然后
 docker-compose up -d
 启动访问pve 的8012 端口即可
 默认账号admin 密码admin123
