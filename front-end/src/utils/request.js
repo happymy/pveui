@@ -2,9 +2,11 @@ import axios from 'axios'
 import { Message } from '@arco-design/web-vue'
 
 // JWT 认证
+// 如果设置了 VITE_HOST，直接使用（开发环境或直接连接后端）
+// 否则使用空字符串（生产环境通过 nginx 代理，API 路径已包含 /api）
+const baseURL = import.meta.env.VITE_HOST || '/api'
 const service = axios.create({
-  baseURL: import.meta.env.VITE_HOST || 'http://127.0.0.1:8000',
-  // baseURL: "/api",
+  baseURL: baseURL,
   timeout: 10000,
 })
 
@@ -20,7 +22,16 @@ service.interceptors.request.use(
     const token = getAccessToken()
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`
+    } else {
+      console.warn('[request] No token found for request:', config.url)
     }
+
+    // 调试日志
+    console.log('[request]', config.method?.toUpperCase(), config.baseURL + config.url, {
+      hasToken: !!token,
+      tokenPreview: token ? token.substring(0, 20) + '...' : null,
+      authHeader: config.headers['Authorization'] ? 'Bearer ***' : 'missing'
+    })
 
     return config
   },
