@@ -5,6 +5,7 @@ services:
   backend:
     image: registry.cn-beijing.aliyuncs.com/yuanbuluo/pveui:backend
     container_name: django-vue-adminx-backend
+    restart: always
     environment:
       - AUTOBAHN_USE_UVLOOP=0
       - TWISTED_REACTOR=asyncio
@@ -23,4 +24,4 @@ services:
       - "8012:80"
     depends_on:
       - backend
-    restart: unless-stopped
+    restart: always
