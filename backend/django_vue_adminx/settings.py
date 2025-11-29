@@ -152,6 +152,16 @@ USE_I18N = True
 USE_TZ = True
 
 
+"""
+SSL / 反向代理相关设置
+----------------------
+当前项目通常部署在 Nginx 反向代理之后，由 Nginx 终止 TLS。
+通过以下设置，让 Django 正确识别经过 HTTPS 的请求，从而在视图中
+request.is_secure() 返回 True（例如生成 wss:// 的 WebSocket URL）。
+"""
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
