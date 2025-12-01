@@ -2,6 +2,9 @@
   <div class="vm-hardware-tab">
     <a-card :bordered="false">
       <div class="hardware-toolbar">
+        <div class="toolbar-info">
+          共 {{ hardwareRows.length }} 个硬件设备
+        </div>
         <a-dropdown trigger="click">
           <a-button type="primary" size="small">
             添加硬件
@@ -24,19 +27,43 @@
         :pagination="false"
         :scroll="{ y: 400 }"
         size="small"
+        :bordered="false"
       >
         <template #value="{ record }">
-          <div class="hardware-value">{{ record.value }}</div>
+          <div class="hardware-value">
+            <div v-if="record.formattedValue" class="formatted-value">
+              {{ record.formattedValue }}
+            </div>
+            <div class="raw-value" :title="record.value">
+              {{ record.value }}
+            </div>
+          </div>
         </template>
         <template #actions="{ record }">
-          <a-button
-            v-if="record.editable"
-            type="text"
-            size="small"
-            @click="openEditDialog(record.editType || record.key, record.key)"
-          >
-            编辑
-          </a-button>
+          <a-space>
+            <a-button
+              v-if="record.editable"
+              type="text"
+              size="small"
+              @click="openEditDialog(record.editType || record.key, record.key)"
+            >
+              编辑
+            </a-button>
+            <a-popconfirm
+              v-if="record.deletable !== false"
+              content="确定要删除此硬件设备吗？此操作不可恢复。"
+              type="warning"
+              @ok="handleDeleteHardware(record.key, record.label)"
+            >
+              <a-button
+                type="text"
+                size="small"
+                status="danger"
+              >
+                删除
+              </a-button>
+            </a-popconfirm>
+          </a-space>
         </template>
       </a-table>
     </a-card>
@@ -82,22 +109,81 @@
           </a-form-item>
         </template>
         <template v-else-if="editState.type === 'disk'">
-          <a-form-item
-            field="diskValue"
-            :label="`磁盘(${editState.targetKey || 'scsi0'})`"
+          <a-form-item field="storage" label="存储">
+            <a-select
+              v-model="editForm.storage"
+              :loading="storagesLoading"
+              placeholder="请选择存储"
+            >
+              <a-option
+                v-for="storage in storages"
+                :key="storage.storage"
+                :value="storage.storage"
+              >
+                {{ storage.storage }} ({{ storage.type }})
+              </a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item 
+            field="volume" 
+            :label="editForm.hasVolume ? '卷名' : '大小'"
           >
-            <a-input v-model="editForm.diskValue" placeholder="示例：local-lvm:32" />
+            <a-input 
+              v-model="editForm.volume" 
+              :placeholder="editForm.hasVolume ? '卷名（如：vm-130-disk-0）' : '大小（如：10G、32G）'"
+              :disabled="editForm.hasVolume"
+            />
             <template #extra>
-              直接使用PVE格式，支持 local-lvm:32、ceph-pool:32 等
+              <span style="color: var(--color-text-3); font-size: 12px;">
+                <span v-if="editForm.hasVolume">已有磁盘的卷名，不可修改</span>
+                <span v-else>新磁盘的大小，格式：数字+G（如：10G、32G）</span>
+              </span>
+            </template>
+          </a-form-item>
+          <a-form-item field="iothread" label="启用IO Thread">
+            <a-switch v-model="editForm.iothread" />
+          </a-form-item>
+          <a-form-item field="size" label="调整大小 (可选)" v-if="editForm.hasVolume">
+            <a-input 
+              v-model="editForm.size" 
+              placeholder="如：10G、20G（仅调整大小时填写）"
+            />
+            <template #extra>
+              <span style="color: var(--color-text-3); font-size: 12px;">
+                仅当需要调整磁盘大小时填写，格式：数字+G
+              </span>
             </template>
           </a-form-item>
         </template>
         <template v-else-if="editState.type === 'network'">
-          <a-form-item field="networkValue" :label="`网络(${editState.targetKey || 'net0'})`">
-            <a-input
-              v-model="editForm.networkValue"
-              placeholder="示例：virtio,bridge=vmbr0,firewall=1"
-            />
+          <a-form-item field="model" label="网卡模型">
+            <a-select v-model="editForm.model">
+              <a-option value="virtio">virtio</a-option>
+              <a-option value="e1000">e1000</a-option>
+              <a-option value="vmxnet3">vmxnet3</a-option>
+              <a-option value="rtl8139">rtl8139</a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item field="bridge" label="桥接">
+            <a-select
+              v-model="editForm.bridge"
+              :loading="networksLoading"
+              allow-search
+            >
+              <a-option
+                v-for="bridge in bridgeOptions"
+                :key="bridge"
+                :value="bridge"
+              >
+                {{ bridge }}
+              </a-option>
+            </a-select>
+          </a-form-item>
+          <a-form-item field="macaddr" label="MAC地址 (可选)">
+            <a-input v-model="editForm.macaddr" placeholder="示例：DE:AD:BE:EF:12:34" />
+          </a-form-item>
+          <a-form-item field="firewall" label="启用防火墙">
+            <a-switch v-model="editForm.firewall" />
           </a-form-item>
         </template>
         <template v-else-if="editState.type === 'efi'">
@@ -483,10 +569,118 @@ const hardwareAddOptions = [
 ]
 
 const hardwareColumns = [
-  { title: '硬件', dataIndex: 'label', width: 160 },
-  { title: '参数', dataIndex: 'value', slotName: 'value' },
-  { title: '操作', dataIndex: 'actions', slotName: 'actions', width: 100 }
+  { 
+    title: '硬件类型', 
+    dataIndex: 'label', 
+    width: 180,
+    fixed: 'left'
+  },
+  { 
+    title: '配置信息', 
+    dataIndex: 'value', 
+    slotName: 'value',
+    ellipsis: true,
+    tooltip: true
+  },
+  { 
+    title: '操作', 
+    dataIndex: 'actions', 
+    slotName: 'actions', 
+    width: 120,
+    fixed: 'right'
+  }
 ]
+
+// 解析磁盘配置
+const parseDiskConfig = (value) => {
+  if (!value) return null
+  const parts = value.split(',')
+  const storagePart = parts[0] || ''
+  const [storage, volumeOrSize] = storagePart.split(':')
+  
+  // 先提取所有options
+  const options = {}
+  parts.slice(1).forEach(part => {
+    const [key, val] = part.split('=')
+    if (key) {
+      if (val === undefined || val === '') {
+        options[key] = true
+      } else {
+        options[key] = val
+      }
+    }
+  })
+  
+  // 判断是已有磁盘（卷名）还是新磁盘（大小）
+  const hasVolume = volumeOrSize && !/^\d+\.?\d*[GM]?$/i.test(volumeOrSize)
+  
+  let size = ''
+  let volume = ''
+  if (hasVolume) {
+    // 已有磁盘，volumeOrSize是卷名
+    volume = volumeOrSize
+    // 从options中提取size（如果存在）
+    if (options.size) {
+      size = options.size
+    }
+  } else {
+    // 新磁盘，volumeOrSize是大小
+    size = volumeOrSize || ''
+    if (size) {
+      // 格式化显示大小
+      let sizeNum = parseFloat(size)
+      if (isNaN(sizeNum)) {
+        const match = size.match(/(\d+\.?\d*)/)
+        if (match) {
+          sizeNum = parseFloat(match[1])
+          const unit = size.replace(match[1], '').toUpperCase()
+          if (unit.includes('T')) {
+            sizeNum = sizeNum * 1024
+          } else if (unit.includes('M')) {
+            sizeNum = sizeNum / 1024
+          }
+        }
+      }
+      if (sizeNum >= 1024) {
+        size = `${(sizeNum / 1024).toFixed(2)} TB`
+      } else if (sizeNum > 0) {
+        size = `${sizeNum.toFixed(0)} GB`
+      }
+    }
+  }
+  
+  return { storage, volume, size, hasVolume, options, raw: value }
+}
+
+// 解析网络配置
+const parseNetworkConfig = (value) => {
+  if (!value) return null
+  const parts = value.split(',')
+  const model = parts[0] || ''
+  const options = {}
+  parts.slice(1).forEach(part => {
+    const [key, val] = part.split('=')
+    if (key) options[key] = val || true
+  })
+  return { model, bridge: options.bridge || '-', macaddr: options.macaddr || '-', firewall: options.firewall === '1' || options.firewall === 1, raw: value }
+}
+
+// 解析其他设备配置
+const parseDeviceConfig = (value, type) => {
+  if (!value) return null
+  if (type === 'efi') {
+    const parts = value.split(',')
+    const storagePart = parts[0] || ''
+    const [storage] = storagePart.split(':')
+    const options = {}
+    parts.slice(1).forEach(part => {
+      const [key, val] = part.split('=')
+      if (key) options[key] = val || true
+    })
+    return { storage, efitype: options.efitype || '4m', raw: value }
+  }
+  return { raw: value }
+}
 
 const hardwareRows = computed(() => {
   const vm = props.vm
@@ -498,80 +692,245 @@ const hardwareRows = computed(() => {
   const sockets = Number(config.sockets || 1)
   const coresPerSocket = Number(config.cores || (vm.cpu_cores ? Math.max(1, Math.floor(vm.cpu_cores / (sockets || 1))) : 1))
   const cpuType = config.cpu || '默认'
+  const totalCores = sockets * coresPerSocket
   rows.push({
     key: 'cpu',
     label: '处理器',
-    value: `${sockets} Socket × ${coresPerSocket} Core (CPU: ${cpuType})`,
-    editable: true
+    value: `sockets=${sockets},cores=${coresPerSocket},cpu=${cpuType}${config.numa ? ',numa=1' : ''}`,
+    formattedValue: `${sockets} Socket × ${coresPerSocket} Core = ${totalCores} 核心 (CPU: ${cpuType})${config.numa ? ', NUMA已启用' : ''}`,
+    editable: true,
+    deletable: false
   })
+  
+  const memoryMB = config.memory || vm.memory_mb || 0
+  const memoryGB = (memoryMB / 1024).toFixed(2)
   rows.push({
     key: 'memory',
     label: '内存',
-    value: config.memory ? `${config.memory} MB` : vm.memory_mb ? `${vm.memory_mb} MB` : '-',
-    editable: true
+    value: `memory=${memoryMB}`,
+    formattedValue: `${memoryMB} MB (${memoryGB} GB)`,
+    editable: true,
+    deletable: false
   })
 
   Object.keys(config).forEach((key) => {
     if (/^scsi\d+$/.test(key)) {
+      const diskInfo = parseDiskConfig(config[key])
+      let formattedValue = config[key]
+      if (diskInfo) {
+        if (diskInfo.hasVolume) {
+          formattedValue = `存储: ${diskInfo.storage}, 卷名: ${diskInfo.volume}`
+          if (diskInfo.size) {
+            formattedValue += `, 大小: ${diskInfo.size}`
+          }
+        } else {
+          formattedValue = `存储: ${diskInfo.storage}, 大小: ${diskInfo.size || '未知'}`
+        }
+        if (diskInfo.options.iothread) {
+          formattedValue += ', IO Thread: 启用'
+        }
+      }
       rows.push({
         key,
         label: `磁盘 (${key})`,
         value: config[key],
+        formattedValue,
         editable: true,
-        editType: 'disk'
+        editType: 'disk',
+        deletable: true
       })
     } else if (/^ide\d+$/.test(key)) {
       const isCDROM = String(config[key]).includes('media=cdrom')
-      rows.push({
-        key,
-        label: isCDROM ? `CD/DVD (${key})` : `磁盘 (${key})`,
-        value: config[key],
-        editable: true,
-        editType: 'disk'
-      })
+      if (isCDROM) {
+        const isoMatch = config[key].match(/([^:]+):(.+),media=cdrom/)
+        rows.push({
+          key,
+          label: `CD/DVD (${key})`,
+          value: config[key],
+          formattedValue: isoMatch ? `ISO: ${isoMatch[2]}` : config[key],
+          editable: true,
+          editType: 'disk',
+          deletable: true
+        })
+      } else {
+        const diskInfo = parseDiskConfig(config[key])
+        let formattedValue = config[key]
+        if (diskInfo) {
+          if (diskInfo.hasVolume) {
+            formattedValue = `存储: ${diskInfo.storage}, 卷名: ${diskInfo.volume}`
+            if (diskInfo.size) {
+              formattedValue += `, 大小: ${diskInfo.size}`
+            }
+          } else {
+            formattedValue = `存储: ${diskInfo.storage}, 大小: ${diskInfo.size || '未知'}`
+          }
+          if (diskInfo.options.iothread) {
+            formattedValue += ', IO Thread: 启用'
+          }
+        }
+        rows.push({
+          key,
+          label: `磁盘 (${key})`,
+          value: config[key],
+          formattedValue,
+          editable: true,
+          editType: 'disk',
+          deletable: true
+        })
+      }
     } else if (/^virtio\d+$/.test(key)) {
+      const diskInfo = parseDiskConfig(config[key])
+      let formattedValue = config[key]
+      if (diskInfo) {
+        if (diskInfo.hasVolume) {
+          formattedValue = `存储: ${diskInfo.storage}, 卷名: ${diskInfo.volume}`
+          if (diskInfo.size) {
+            formattedValue += `, 大小: ${diskInfo.size}`
+          }
+        } else {
+          formattedValue = `存储: ${diskInfo.storage}, 大小: ${diskInfo.size || '未知'}`
+        }
+        if (diskInfo.options.iothread) {
+          formattedValue += ', IO Thread: 启用'
+        }
+      }
       rows.push({
         key,
         label: `磁盘 (${key})`,
         value: config[key],
+        formattedValue,
         editable: true,
-        editType: 'disk'
+        editType: 'disk',
+        deletable: true
       })
     } else if (/^sata\d+$/.test(key)) {
+      const diskInfo = parseDiskConfig(config[key])
+      let formattedValue = config[key]
+      if (diskInfo) {
+        if (diskInfo.hasVolume) {
+          formattedValue = `存储: ${diskInfo.storage}, 卷名: ${diskInfo.volume}`
+          if (diskInfo.size) {
+            formattedValue += `, 大小: ${diskInfo.size}`
+          }
+        } else {
+          formattedValue = `存储: ${diskInfo.storage}, 大小: ${diskInfo.size || '未知'}`
+        }
+        if (diskInfo.options.iothread) {
+          formattedValue += ', IO Thread: 启用'
+        }
+      }
       rows.push({
         key,
         label: `磁盘 (${key})`,
         value: config[key],
+        formattedValue,
         editable: true,
-        editType: 'disk'
+        editType: 'disk',
+        deletable: true
       })
     } else if (/^net\d+$/.test(key)) {
+      const netInfo = parseNetworkConfig(config[key])
       rows.push({
         key,
         label: `网络 (${key})`,
         value: config[key],
+        formattedValue: netInfo ? `模型: ${netInfo.model}, 桥接: ${netInfo.bridge}, MAC: ${netInfo.macaddr}, 防火墙: ${netInfo.firewall ? '启用' : '禁用'}` : config[key],
         editable: true,
-        editType: 'network'
+        editType: 'network',
+        deletable: true
       })
     }
   })
 
   if (config.efidisk0) {
-    rows.push({ key: 'efidisk0', label: 'EFI 磁盘', value: config.efidisk0, editable: true, editType: 'efi' })
+    const efiInfo = parseDeviceConfig(config.efidisk0, 'efi')
+    rows.push({ 
+      key: 'efidisk0', 
+      label: 'EFI 磁盘', 
+      value: config.efidisk0,
+      formattedValue: efiInfo ? `存储: ${efiInfo.storage}, 类型: ${efiInfo.efitype}` : config.efidisk0,
+      editable: true, 
+      editType: 'efi',
+      deletable: true
+    })
   }
   if (config.tpmstate0) {
-    rows.push({ key: 'tpmstate0', label: 'TPM', value: config.tpmstate0, editable: true, editType: 'tpm' })
+    rows.push({ 
+      key: 'tpmstate0', 
+      label: 'TPM', 
+      value: config.tpmstate0,
+      formattedValue: config.tpmstate0,
+      editable: true, 
+      editType: 'tpm',
+      deletable: true
+    })
   }
   if (config.usb0) {
-    rows.push({ key: 'usb0', label: 'USB 设备', value: config.usb0, editable: true, editType: 'usb' })
+    rows.push({ 
+      key: 'usb0', 
+      label: 'USB 设备', 
+      value: config.usb0,
+      formattedValue: config.usb0,
+      editable: true, 
+      editType: 'usb',
+      deletable: true
+    })
   }
   if (config.hostpci0) {
-    rows.push({ key: 'hostpci0', label: 'PCI 设备', value: config.hostpci0, editable: true, editType: 'pci' })
+    rows.push({ 
+      key: 'hostpci0', 
+      label: 'PCI 设备', 
+      value: config.hostpci0,
+      formattedValue: config.hostpci0,
+      editable: true, 
+      editType: 'pci',
+      deletable: true
+    })
   }
-  if (config.serial0) rows.push({ key: 'serial0', label: '串口', value: config.serial0, editable: true, editType: 'serial' })
-  if (config.audio0) rows.push({ key: 'audio0', label: '音频', value: config.audio0, editable: true, editType: 'audio' })
-  if (config.rng0) rows.push({ key: 'rng0', label: '随机数设备', value: config.rng0, editable: true, editType: 'rng' })
-  if (config.virtiofs0) rows.push({ key: 'virtiofs0', label: 'Virtiofs', value: config.virtiofs0, editable: true, editType: 'virtiofs' })
+  if (config.serial0) {
+    rows.push({ 
+      key: 'serial0', 
+      label: '串口', 
+      value: config.serial0,
+      formattedValue: config.serial0,
+      editable: true, 
+      editType: 'serial',
+      deletable: true
+    })
+  }
+  if (config.audio0) {
+    rows.push({ 
+      key: 'audio0', 
+      label: '音频', 
+      value: config.audio0,
+      formattedValue: config.audio0,
+      editable: true, 
+      editType: 'audio',
+      deletable: true
+    })
+  }
+  if (config.rng0) {
+    rows.push({ 
+      key: 'rng0', 
+      label: '随机数设备', 
+      value: config.rng0,
+      formattedValue: config.rng0,
+      editable: true, 
+      editType: 'rng',
+      deletable: true
+    })
+  }
+  if (config.virtiofs0) {
+    rows.push({ 
+      key: 'virtiofs0', 
+      label: 'Virtiofs', 
+      value: config.virtiofs0,
+      formattedValue: config.virtiofs0,
+      editable: true, 
+      editType: 'virtiofs',
+      deletable: true
+    })
+  }
 
   return rows
 })
@@ -667,18 +1026,50 @@ const openEditDialog = (type, targetKey = '') => {
         memory: Number(config.memory || props.vm.memory_mb || 512)
       })
       break
-    case 'disk':
+    case 'disk': {
       editState.title = `编辑磁盘 (${editState.targetKey || 'scsi0'})`
-      Object.assign(editForm, {
-        diskValue: config[editState.targetKey || 'scsi0'] || ''
-      })
+      const diskValue = config[editState.targetKey || 'scsi0'] || ''
+      const diskInfo = parseDiskConfig(diskValue)
+      if (diskInfo) {
+        Object.assign(editForm, {
+          storage: diskInfo.storage || '',
+          volume: diskInfo.hasVolume ? diskInfo.volume : (diskInfo.size || ''),
+          hasVolume: diskInfo.hasVolume,
+          iothread: diskInfo.options.iothread === 'on' || diskInfo.options.iothread === 1 || diskInfo.options.iothread === true || diskInfo.options.iothread === '1',
+          size: diskInfo.hasVolume ? (diskInfo.options.size || '') : ''
+        })
+      } else {
+        Object.assign(editForm, {
+          storage: storages.value[0]?.storage || '',
+          volume: '',
+          hasVolume: false,
+          iothread: false,
+          size: ''
+        })
+      }
       break
-    case 'network':
+    }
+    case 'network': {
       editState.title = `编辑网络 (${editState.targetKey || 'net0'})`
-      Object.assign(editForm, {
-        networkValue: config[editState.targetKey || 'net0'] || ''
-      })
+      const netValue = config[editState.targetKey || 'net0'] || ''
+      const netInfo = parseNetworkConfig(netValue)
+      if (netInfo) {
+        Object.assign(editForm, {
+          model: netInfo.model || 'virtio',
+          bridge: netInfo.bridge !== '-' ? netInfo.bridge : 'vmbr0',
+          macaddr: netInfo.macaddr !== '-' ? netInfo.macaddr : '',
+          firewall: netInfo.firewall
+        })
+      } else {
+        Object.assign(editForm, {
+          model: 'virtio',
+          bridge: 'vmbr0',
+          macaddr: '',
+          firewall: true
+        })
+      }
       break
+    }
     case 'efi':
       editState.title = '编辑 EFI 磁盘'
       Object.assign(editForm, {
@@ -751,11 +1142,19 @@ const editFormRules = computed(() => {
       }
     case 'disk':
       return {
-        diskValue: [{ required: true, message: '请输入磁盘配置' }]
+        storage: [{ required: true, message: '请选择存储' }],
+        volume: [{ required: true, message: '请输入卷名或大小' }]
       }
     case 'network':
       return {
-        networkValue: [{ required: true, message: '请输入网络配置' }]
+        bridge: [{ required: true, message: '请选择桥接' }],
+        macaddr: [{
+          validator: (value, callback) => {
+            if (!value) return callback()
+            if (macPattern.test(value)) return callback()
+            return callback('MAC地址格式不正确')
+          }
+        }]
       }
     case 'efi':
       return {
@@ -807,14 +1206,39 @@ const buildParams = () => {
       return {
         memory: Number(editForm.memory)
       }
-    case 'disk':
+    case 'disk': {
+      if (!editForm.storage || !editForm.volume) {
+        throw new Error('存储和卷名/大小不能为空')
+      }
+      
+      // 构建磁盘配置值
+      // 格式：storage:volume或storage:size
+      let diskValue = `${editForm.storage}:${editForm.volume}`
+      
+      // 如果是已有磁盘且有调整大小参数，添加size参数
+      if (editForm.hasVolume && editForm.size) {
+        diskValue += `,size=${editForm.size}`
+      }
+      
+      // 添加iothread参数
+      if (editForm.iothread) {
+        diskValue += ',iothread=on'
+      }
+      
       return editState.targetKey
-        ? { [editState.targetKey]: editForm.diskValue }
-        : { scsi0: editForm.diskValue }
-    case 'network':
+        ? { [editState.targetKey]: diskValue }
+        : { scsi0: diskValue }
+    }
+    case 'network': {
+      const parts = [editForm.model || 'virtio']
+      if (editForm.bridge) parts.push(`bridge=${editForm.bridge}`)
+      if (editForm.macaddr) parts.push(`macaddr=${editForm.macaddr}`)
+      parts.push(`firewall=${editForm.firewall ? 1 : 0}`)
+      const networkValue = parts.join(',')
       return editState.targetKey
-        ? { [editState.targetKey]: editForm.networkValue }
-        : { net0: editForm.networkValue }
+        ? { [editState.targetKey]: networkValue }
+        : { net0: networkValue }
+    }
     case 'efi':
       return { efidisk0: editForm.efiValue }
     case 'tpm':
@@ -1140,6 +1564,43 @@ const handleAddSubmit = async () => {
   }
 }
 
+// 删除硬件设备
+const handleDeleteHardware = async (key, label) => {
+  if (!props.vmId) {
+    Message.warning('缺少虚拟机ID，无法删除硬件')
+    return
+  }
+  
+  // 对于CPU和内存，不允许删除
+  if (key === 'cpu' || key === 'memory') {
+    Message.warning('无法删除CPU和内存配置')
+    return
+  }
+  
+  try {
+    // 删除硬件设备：在PVE API中，删除配置项需要将值设置为空字符串
+    // 或者使用 delete 参数（格式：delete=key1,key2）
+    // 这里我们使用空字符串的方式，因为更简单直接
+    const params = { [key]: '' }
+    
+    // 对于某些设备，可能需要使用delete参数
+    // 但先尝试空字符串方式，如果失败再考虑其他方式
+    await updateVirtualMachineHardware(props.vmId, { params })
+    Message.success(`已删除 ${label}`)
+    emit('refresh')
+  } catch (error) {
+    // 如果空字符串方式失败，尝试使用delete参数
+    try {
+      const deleteParams = { delete: key }
+      await updateVirtualMachineHardware(props.vmId, { params: deleteParams })
+      Message.success(`已删除 ${label}`)
+      emit('refresh')
+    } catch (deleteError) {
+      Message.error('删除硬件失败：' + (error.message || deleteError.message || '未知错误'))
+    }
+  }
+}
+
 // 监听 vm 变化，加载硬件资源
 watch(() => props.vm, (newVm) => {
   if (newVm) {
@@ -1175,16 +1636,39 @@ onMounted(() => {
   flex-direction: column;
 }
 
-.hardware-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
-  flex-shrink: 0;
-}
 
 .hardware-value {
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+.hardware-value .formatted-value {
+  font-weight: 500;
+  color: var(--color-text-1);
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.hardware-value .raw-value {
+  font-size: 12px;
+  color: var(--color-text-3);
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  word-break: break-all;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+.hardware-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.hardware-toolbar .toolbar-info {
+  font-size: 12px;
+  color: var(--color-text-3);
 }
 
 .edit-footer {
