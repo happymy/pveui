@@ -1,6 +1,7 @@
 # Django 后端 Dockerfile
 FROM python:3.12-slim
 
+
 # 设置工作目录
 WORKDIR /app
 

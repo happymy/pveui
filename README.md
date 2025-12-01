@@ -89,7 +89,6 @@ docker-compose down
 - **前端**: http://localhost
 - **后端 API**: http://localhost:8000
 
-详细部署说明请查看 [DOCKER.md](./DOCKER.md)
 
 ## 📸 功能截图&交流群
 ![交流群](images/965bd7a18bfc1f0675b417501d581920.jpg)
