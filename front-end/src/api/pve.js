@@ -116,7 +116,8 @@ export function uploadStorageContent(serverId, node, storage, data) {
     url: `/api/pve/servers/${serverId}/nodes/${node}/storage/${storage}/upload/`,
     method: 'post',
     data,
-    headers: { 'Content-Type': 'multipart/form-data' }
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 600000 // 10分钟超时，用于上传大文件（如ISO镜像）
   })
 }
 

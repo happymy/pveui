@@ -465,7 +465,12 @@ const openContentDrawer = (record) => {
 }
 
 const handleUpload = async (options) => {
-  const { file, onSuccess, onError } = options
+  const { fileItem, onSuccess, onError } = options
+  const file = fileItem?.file
+  if (!file) {
+    onError?.(new Error('文件无效'))
+    return
+  }
   if (!selectedServer.value || !selectedNode.value || !currentStorage.value) {
     onError?.(new Error('缺少目标存储信息'))
     return
@@ -473,7 +478,7 @@ const handleUpload = async (options) => {
   uploading.value = true
   const formData = new FormData()
   formData.append('file', file)
-  formData.append('filename', file.name)
+  formData.append('filename', file.name || 'upload.iso')
   formData.append('content', 'iso')
   try {
     const nodeName = currentStorage.value.__node || selectedNode.value

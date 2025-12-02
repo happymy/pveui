@@ -67,6 +67,12 @@ service.interceptors.response.use(
       return Promise.reject(error)
     }
 
+    // 处理超时错误
+    if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+      Message.error('请求超时，请检查网络连接或文件大小')
+      return Promise.reject(error)
+    }
+
     // 处理其他错误响应
     const errorMessage = error.response?.data?.detail ||
                          error.response?.data?.message ||
