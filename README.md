@@ -114,7 +114,7 @@ docker-compose down
 
 
 ## 📸 功能截图&交流群
-![交流群](images/392478e38a9d7d78d8306116bad008af.jpg)
+![交流群](images/8a680cb614758f6dbf4d20df46d3399b.jpg)
 ![PVE管理](images/截屏2025-11-27%2010.25.14.png)
 ![PVE节点](images/截屏2025-11-28%2010.05.33.png)
 ![虚拟机管理](images/截屏2025-11-28%2010.10.32.png)
