@@ -2,8 +2,11 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
 from django.utils.module_loading import import_string
 from django.utils import timezone
+import logging
 
 from apps.tasks.models import Job
+
+logger = logging.getLogger(__name__)
 
 _scheduler: BackgroundScheduler | None = None
 
@@ -65,24 +68,31 @@ def _import_func(func_name: str):
     """导入任务函数
     
     支持格式：
-    - 函数名（需要在任务注册表中查找）: NoParams, Params
-    - 完整路径: apps.tasks.examples:demo_task
+    - 函数名（从 apps.tasks.task 模块导入）: NoParams, Params, reset_admin_password
+    - 完整路径（模块路径:函数名）: apps.pve.tasks:create_vm_backup, apps.pve.tasks:create_vm_snapshot
     """
-    # 简单实现：先尝试作为函数名导入
-    # 实际项目中可以维护一个任务注册表
+    # 如果包含冒号，说明是完整路径格式
+    if ':' in func_name:
+        try:
+            return import_string(func_name)
+        except ImportError as e:
+            raise ImportError(f'无法导入任务函数 {func_name}: {e}')
+        except Exception as e:
+            raise ImportError(f'导入任务函数 {func_name} 时出错: {e}')
+    
+    # 否则尝试从 apps.tasks.task 模块导入
     try:
-        # 尝试从 apps.tasks.examples 导入
         from apps.tasks import task
         if hasattr(task, func_name):
             return getattr(task, func_name)
     except Exception:
         pass
     
-    # 尝试完整路径导入
+    # 如果还是找不到，尝试完整路径导入（向后兼容）
     try:
-        return import_string(f'apps.tasks.examples:{func_name}')
+        return import_string(f'apps.tasks.task:{func_name}')
     except Exception:
-        raise ImportError(f'无法导入任务函数: {func_name}')
+        raise ImportError(f'无法导入任务函数: {func_name}。请使用完整路径格式，如: apps.pve.tasks:create_vm_backup')
 
 
 def add_or_update_job(job: Job) -> None:
@@ -92,31 +102,42 @@ def add_or_update_job(job: Job) -> None:
         remove_job(job)
         return
     
-    trigger = _build_trigger(job)
-    func = _import_func(job.invoke_target)
-    job_id = job.job_id or f'task-{job.pk}'
-    
-    # 移除已存在的任务
     try:
-        scheduler.remove_job(job_id)
-    except Exception:
-        pass
-    
-    # 添加任务
-    scheduler_job = scheduler.add_job(
-        func=func,
-        trigger=trigger,
-        args=job.job_params or [],
-        id=job_id,
-        replace_existing=True,
-    )
-    
-    # 更新job_id和下次执行时间
-    next_run = scheduler_job.next_run_time
-    Job.objects.filter(pk=job.pk).update(
-        job_id=job_id,
-        next_valid_time=next_run
-    )
+        trigger = _build_trigger(job)
+        func = _import_func(job.invoke_target)
+        job_id = job.job_id or f'task-{job.pk}'
+        
+        # 移除已存在的任务
+        try:
+            scheduler.remove_job(job_id)
+        except Exception:
+            pass
+        
+        # 添加任务
+        scheduler_job = scheduler.add_job(
+            func=func,
+            trigger=trigger,
+            args=job.job_params or [],
+            id=job_id,
+            replace_existing=True,
+        )
+        
+        # 更新job_id和下次执行时间
+        next_run = scheduler_job.next_run_time
+        Job.objects.filter(pk=job.pk).update(
+            job_id=job_id,
+            next_valid_time=next_run
+        )
+        logger.info(f'[定时任务] 任务 "{job.job_name}" (ID: {job.pk}) 已添加到调度器，下次执行时间: {next_run}')
+    except ValueError as e:
+        logger.error(f'[定时任务] 任务 "{job.job_name}" (ID: {job.pk}) 添加失败: Cron表达式错误 - {e}')
+        raise
+    except ImportError as e:
+        logger.error(f'[定时任务] 任务 "{job.job_name}" (ID: {job.pk}) 添加失败: 无法导入函数 "{job.invoke_target}" - {e}')
+        raise
+    except Exception as e:
+        logger.exception(f'[定时任务] 任务 "{job.job_name}" (ID: {job.pk}) 添加失败: {e}')
+        raise
 
 
 def remove_job(job: Job) -> None:
@@ -131,16 +152,35 @@ def remove_job(job: Job) -> None:
 
 def sync_all_jobs_from_db() -> None:
     """从数据库同步所有启用的任务到调度器"""
-    for job in Job.objects.filter(status=1):
+    jobs = Job.objects.filter(status=1)
+    logger.info(f'[定时任务] 开始同步 {jobs.count()} 个启用的任务到调度器')
+    success_count = 0
+    fail_count = 0
+    
+    for job in jobs:
         try:
             add_or_update_job(job)
-        except Exception:
-            # 跳过有问题的任务
+            success_count += 1
+        except Exception as e:
+            fail_count += 1
+            logger.error(f'[定时任务] 同步任务 "{job.job_name}" (ID: {job.pk}) 失败: {e}')
+            # 跳过有问题的任务，继续处理其他任务
             continue
+    
+    logger.info(f'[定时任务] 任务同步完成: 成功 {success_count} 个, 失败 {fail_count} 个')
 
 
 def run_job_now(job: Job) -> None:
     """立即执行任务"""
-    func = _import_func(job.invoke_target)
-    func(*(job.job_params or []))
-    Job.objects.filter(pk=job.pk).update(last_run_at=timezone.now())
+    try:
+        func = _import_func(job.invoke_target)
+        logger.info(f'[定时任务] 立即执行任务 "{job.job_name}" (ID: {job.pk}), 调用目标: {job.invoke_target}, 参数: {job.job_params}')
+        func(*(job.job_params or []))
+        Job.objects.filter(pk=job.pk).update(last_run_at=timezone.now())
+        logger.info(f'[定时任务] 任务 "{job.job_name}" (ID: {job.pk}) 执行完成')
+    except ImportError as e:
+        logger.error(f'[定时任务] 任务 "{job.job_name}" (ID: {job.pk}) 执行失败: 无法导入函数 "{job.invoke_target}" - {e}')
+        raise
+    except Exception as e:
+        logger.exception(f'[定时任务] 任务 "{job.job_name}" (ID: {job.pk}) 执行失败: {e}')
+        raise
