@@ -2,6 +2,11 @@
 
 基于 Django REST Framework 和 Vue 3 的 PVE 集群管理系统，提供统一的 PVE 资源管理和操作界面。
 
+http://token.ctfzone.cloud/ 
+不是按 Token 计费，而是按天收费 任性用 吃到饱
+
+传统平台用多少 Token 算多少钱，我们改成日订阅：按天开通，当天不限量使用。 适合高频调用、长期跑任务、团队持续开发。
+
 ![Python Version](https://img.shields.io/badge/python-3.12+-blue.svg)
 ![Django Version](https://img.shields.io/badge/django-5.2.7-green.svg)
 ![Vue Version](https://img.shields.io/badge/vue-3.5.22-brightgreen.svg)
